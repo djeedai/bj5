@@ -1,5 +1,5 @@
 [package]
-name = "bevy_github_ci_template"
+name = "bj5"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0 OR CC0-1.0"
@@ -15,5 +15,15 @@ opt-level = 1
 [profile.dev.package."*"]
 opt-level = 3
 
+[features]
+atlas = []
+default = ["atlas"]
+
 [dependencies]
 bevy = "0.14"
+tiled = "0.12"
+bevy_ecs_tilemap = { version = "0.14", features = [ "atlas" ] }
+bevy_keith = "0.1"
+bevy_kira_audio = "0.20"
+thiserror = "1"
+bevy-inspector-egui = "0.25"
