@@ -15,6 +15,19 @@ use bevy_rapier2d::prelude::*;
 
 mod tiled;
 
+#[derive(Component, Reflect)]
+struct Player {
+    pub impulse_factor: f32,
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Self {
+            impulse_factor: 500.,
+        }
+    }
+}
+
 #[derive(Component)]
 struct AnimationIndices {
     first: usize,
@@ -57,10 +70,12 @@ fn main() {
         .add_plugins(AudioPlugin)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(16.0))
         .add_plugins(RapierDebugRenderPlugin::default())
+        .register_type::<Player>()
         .insert_resource(ClearColor(Color::BLACK))
         .add_systems(Startup, setup)
         .add_systems(Update, close_on_esc)
         .add_systems(Update, animate_sprites)
+        .add_systems(Update, player_input)
         .run();
 }
 
@@ -73,7 +88,7 @@ pub fn close_on_esc(mut ev_app_exit: EventWriter<AppExit>, input: Res<ButtonInpu
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    audio: Res<Audio>,
+    _audio: Res<Audio>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     commands.spawn((
@@ -119,8 +134,11 @@ fn setup(
         AnimationIndices { first: 0, last: 3 },
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
         RigidBody::Dynamic,
+        Ccd::enabled(),
+        ExternalImpulse::default(),
         Collider::ball(7.5),
         Name::new("Player"),
+        Player::default(),
     ));
 
     // Start background audio
@@ -140,5 +158,28 @@ fn animate_sprites(
                 atlas.index + 1
             };
         }
+    }
+}
+
+fn player_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut player: Query<(&Player, &mut ExternalImpulse)>,
+) {
+    let (player, mut impulse) = player.single_mut();
+
+    let mut dv = Vec2::ZERO;
+    if keyboard.pressed(KeyCode::KeyA) {
+        dv.x -= 1.;
+    }
+    if keyboard.pressed(KeyCode::KeyD) {
+        dv.x += 1.;
+    }
+    if keyboard.just_pressed(KeyCode::Space) {
+        dv.y += 10.;
+    }
+    trace!("dv: {:?}", dv);
+
+    if dv != Vec2::ZERO {
+        impulse.impulse = dv * player.impulse_factor;
     }
 }
