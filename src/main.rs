@@ -76,24 +76,30 @@ fn setup(
     audio: Res<Audio>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    commands.spawn(Camera2dBundle {
-        projection: OrthographicProjection {
-            scale: 1.0,
-            near: -1000.0,
-            far: 1000.0,
-            viewport_origin: Vec2::new(0.5, 0.5),
-            scaling_mode: ScalingMode::WindowSize(3.0),
+    commands.spawn((
+        Camera2dBundle {
+            projection: OrthographicProjection {
+                scale: 1.0,
+                near: -1000.0,
+                far: 1000.0,
+                viewport_origin: Vec2::new(0.5, 0.5),
+                scaling_mode: ScalingMode::WindowSize(3.0),
+                ..default()
+            },
             ..default()
         },
-        ..default()
-    });
+        Name::new("Camera"),
+    ));
 
     // Load map
     let map_handle: Handle<tiled::TiledMap> = asset_server.load("map1.tmx");
-    commands.spawn(tiled::TiledMapBundle {
-        tiled_map: map_handle,
-        ..Default::default()
-    });
+    commands.spawn((
+        tiled::TiledMapBundle {
+            tiled_map: map_handle,
+            ..Default::default()
+        },
+        Name::new("TiledLevel"),
+    ));
 
     // Load player
     let player_sheet = asset_server.load("player1.png");
@@ -102,7 +108,7 @@ fn setup(
     let player_atlas_layout = texture_atlas_layouts.add(player_layout);
     commands.spawn((
         SpriteBundle {
-            transform: Transform::from_xyz(0., 0., 1.),
+            transform: Transform::from_xyz(40., 0., 10.),
             texture: player_sheet,
             ..default()
         },
@@ -114,6 +120,7 @@ fn setup(
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
         RigidBody::Dynamic,
         Collider::ball(7.5),
+        Name::new("Player"),
     ));
 
     // Start background audio
