@@ -13,6 +13,15 @@ use bevy_kira_audio::prelude::*;
 
 mod tiled;
 
+#[derive(Component)]
+struct AnimationIndices {
+    first: usize,
+    last: usize,
+}
+
+#[derive(Component, Deref, DerefMut)]
+struct AnimationTimer(Timer);
+
 fn main() {
     App::new()
         .add_plugins(
@@ -39,8 +48,10 @@ fn main() {
         .add_plugins(bevy_ecs_tilemap::TilemapPlugin)
         .add_plugins(tiled::TiledMapPlugin)
         .add_plugins(AudioPlugin)
+        .insert_resource(ClearColor(Color::BLACK))
         .add_systems(Startup, setup)
         .add_systems(Update, close_on_esc)
+        .add_systems(Update, animate_sprites)
         .run();
 }
 
@@ -50,7 +61,12 @@ pub fn close_on_esc(mut ev_app_exit: EventWriter<AppExit>, input: Res<ButtonInpu
     }
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>, audio: Res<Audio>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
     commands.spawn(Camera2dBundle {
         projection: OrthographicProjection {
             scale: 1.0,
@@ -63,13 +79,48 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, audio: Res<Audi
         ..default()
     });
 
+    // Load map
     let map_handle: Handle<tiled::TiledMap> = asset_server.load("map1.tmx");
-
     commands.spawn(tiled::TiledMapBundle {
         tiled_map: map_handle,
         ..Default::default()
     });
 
+    // Load player
+    let player_sheet = asset_server.load("player1.png");
+    let player_layout =
+        TextureAtlasLayout::from_grid(UVec2::splat(15), 4, 1, Some(UVec2::ONE), None);
+    let player_atlas_layout = texture_atlas_layouts.add(player_layout);
+    commands.spawn((
+        SpriteBundle {
+            transform: Transform::from_xyz(0., 0., 1.),
+            texture: player_sheet,
+            ..default()
+        },
+        TextureAtlas {
+            layout: player_atlas_layout,
+            index: 0,
+        },
+        AnimationIndices { first: 0, last: 3 },
+        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+    ));
+
     // Start background audio
     //audio.play(asset_server.load("background_audio.ogg")).looped();
+}
+
+fn animate_sprites(
+    time: Res<Time>,
+    mut query: Query<(&AnimationIndices, &mut AnimationTimer, &mut TextureAtlas)>,
+) {
+    for (indices, mut timer, mut atlas) in &mut query {
+        timer.tick(time.delta());
+        if timer.just_finished() {
+            atlas.index = if atlas.index == indices.last {
+                indices.first
+            } else {
+                atlas.index + 1
+            };
+        }
+    }
 }

@@ -20,7 +20,7 @@ atlas = []
 default = ["atlas"]
 
 [dependencies]
-bevy = "0.14"
+bevy = { version = "0.14", features = [ "file_watcher" ] }
 tiled = "0.12"
 bevy_ecs_tilemap = { version = "0.14", features = [ "atlas" ] }
 bevy_keith = "0.1"

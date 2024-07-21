@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="20" height="15" tilewidth="16" tileheight="16" infinite="0" nextlayerid="2" nextobjectid="1">
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="20" height="15" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="1">
  <tileset firstgid="1" name="tileset1" tilewidth="16" tileheight="16" tilecount="256" columns="16">
   <image source="tileset1.png" width="256" height="256"/>
+  <tile id="248">
+   <objectgroup draworder="index" id="2">
+    <object id="3" x="0" y="0" width="16" height="16"/>
+   </objectgroup>
+  </tile>
  </tileset>
- <layer id="1" name="Tile Layer 1" width="20" height="15">
+ <layer id="1" name="Walls" width="20" height="15">
   <data encoding="base64" compression="zlib">
-   eJxjZGBgYETCilDMSARWxKIeHbAAMTMWcWyABWoGsepHwSgYBQggAsTCVDRPEIiFKDSDCQnDygomCjAAvT0BdA==
+   eJzNVEEOgCAMq8AHVD7A/z8pRBaWOZeJHmzSA2MpgzYUAMXBpTLiROpruS9rlpYG0o2sZmnIXg/knDMaGtIDnVwZOr/AinGfIOido3Hv9YT7d7d06D2pd2M9Wma0eQOu3mq50O7OczGbDzqL+Hdw396i+ch9y4a2zI5G6bPlueffaDwAhUcJvw==
+  </data>
+ </layer>
+ <layer id="2" name="Interactables" width="20" height="15">
+  <data encoding="base64" compression="zlib">
+   eJxjYCANLCRR/ah5o+aNmjd8zaM3AAB8Cwgu
   </data>
  </layer>
 </map>

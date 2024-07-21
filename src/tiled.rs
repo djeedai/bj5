@@ -31,6 +31,9 @@ use bevy_ecs_tilemap::prelude::*;
 
 use thiserror::Error;
 
+#[derive(Default, Component)]
+pub struct TileCollision;
+
 #[derive(Default)]
 pub struct TiledMapPlugin;
 
@@ -317,6 +320,8 @@ pub fn process_loaded_maps(
                         let mut tile_storage = TileStorage::empty(map_size);
                         let layer_entity = commands.spawn_empty().id();
 
+                        let collision = layer.name == "Collision";
+
                         for x in 0..map_size.x {
                             for y in 0..map_size.y {
                                 // Transform TMX coords into bevy coords.
@@ -367,6 +372,10 @@ pub fn process_loaded_maps(
                                     })
                                     .id();
                                 tile_storage.set(&tile_pos, tile_entity);
+
+                                if collision {
+                                    commands.entity(tile_entity).insert(TileCollision);
+                                }
                             }
                         }
 
