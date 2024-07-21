@@ -15,6 +15,11 @@ use bevy_rapier2d::prelude::*;
 
 mod tiled;
 
+#[derive(Default, Component)]
+struct PlayerStart {
+    pub position: Vec3,
+}
+
 #[derive(Component, Reflect)]
 struct Player {
     pub impulse_factor: f32,
@@ -69,13 +74,20 @@ fn main() {
         .add_plugins(tiled::TiledMapPlugin)
         .add_plugins(AudioPlugin)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(16.0))
-        .add_plugins(RapierDebugRenderPlugin::default())
+        .add_plugins(RapierDebugRenderPlugin {
+            mode: DebugRenderMode::default()
+                | DebugRenderMode::CONTACTS
+                | DebugRenderMode::SOLVER_CONTACTS,
+            ..default()
+        })
         .register_type::<Player>()
         .insert_resource(ClearColor(Color::BLACK))
         .add_systems(Startup, setup)
+        .add_systems(Update, post_load_setup)
         .add_systems(Update, close_on_esc)
         .add_systems(Update, animate_sprites)
         .add_systems(Update, player_input)
+        .add_systems(PostUpdate, update_camera)
         .run();
 }
 
@@ -85,12 +97,7 @@ pub fn close_on_esc(mut ev_app_exit: EventWriter<AppExit>, input: Res<ButtonInpu
     }
 }
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    _audio: Res<Audio>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>, _audio: Res<Audio>) {
     commands.spawn((
         Camera2dBundle {
             projection: OrthographicProjection {
@@ -116,14 +123,36 @@ fn setup(
         Name::new("TiledLevel"),
     ));
 
-    // Load player
+    // Start background audio
+    //audio.play(asset_server.load("background_audio.ogg")).looped();
+}
+
+fn post_load_setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    q_player_start: Query<&PlayerStart, Added<PlayerStart>>,
+    mut q_camera: Query<&mut Transform, With<Camera>>,
+) {
+    let Ok(player_start) = q_player_start.get_single() else {
+        return;
+    };
+
+    // Move camera
+    if let Ok(mut camera_transform) = q_camera.get_single_mut() {
+        camera_transform.translation.x = player_start.position.x;
+        camera_transform.translation.y = player_start.position.y;
+    }
+
+    // Spawn player
+    trace!("Spawning player at {:?}...", player_start.position);
     let player_sheet = asset_server.load("player1.png");
     let player_layout =
         TextureAtlasLayout::from_grid(UVec2::splat(15), 4, 1, Some(UVec2::ONE), None);
     let player_atlas_layout = texture_atlas_layouts.add(player_layout);
     commands.spawn((
         SpriteBundle {
-            transform: Transform::from_xyz(40., 0., 10.),
+            transform: Transform::from_xyz(player_start.position.x, player_start.position.y, 10.),
             texture: player_sheet,
             ..default()
         },
@@ -140,9 +169,6 @@ fn setup(
         Name::new("Player"),
         Player::default(),
     ));
-
-    // Start background audio
-    //audio.play(asset_server.load("background_audio.ogg")).looped();
 }
 
 fn animate_sprites(
@@ -165,7 +191,9 @@ fn player_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut player: Query<(&Player, &mut ExternalImpulse)>,
 ) {
-    let (player, mut impulse) = player.single_mut();
+    let Ok((player, mut impulse)) = player.get_single_mut() else {
+        return;
+    };
 
     let mut dv = Vec2::ZERO;
     if keyboard.pressed(KeyCode::KeyA) {
@@ -182,4 +210,17 @@ fn player_input(
     if dv != Vec2::ZERO {
         impulse.impulse = dv * player.impulse_factor;
     }
+}
+
+fn update_camera(
+    player: Query<&Transform, (With<Player>, Without<Camera>)>,
+    mut camera: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+) {
+    let Ok(player) = player.get_single() else {
+        return;
+    };
+    let Ok(mut camera) = camera.get_single_mut() else {
+        return;
+    };
+    camera.translation = player.translation;
 }

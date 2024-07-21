@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="20" height="15" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="1">
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="200" height="150" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#000000" nextlayerid="4" nextobjectid="7">
  <tileset firstgid="1" name="tileset1" tilewidth="16" tileheight="16" tilecount="256" columns="16">
   <image source="tileset1.png" width="256" height="256"/>
   <tile id="248">
@@ -8,14 +8,33 @@
    </objectgroup>
   </tile>
  </tileset>
- <layer id="1" name="Walls" width="20" height="15">
+ <layer id="1" name="Walls" width="200" height="150">
   <data encoding="base64" compression="zlib">
-   eJzNVEEOgCAMq8AHVD7A/z8pRBaWOZeJHmzSA2MpgzYUAMXBpTLiROpruS9rlpYG0o2sZmnIXg/knDMaGtIDnVwZOr/AinGfIOido3Hv9YT7d7d06D2pd2M9Wma0eQOu3mq50O7OczGbDzqL+Hdw396i+ch9y4a2zI5G6bPlueffaDwAhUcJvw==
+   eJzt2ksKgzAQAFA/vUA/F+j9L1mlDg0hEQutYHwPZiEx4CLDJBO7DgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLvnxuinGJc5l+U5H+/3/HDYwZbcGCtzI09q43B0a/XC2ufsIg9K+yjgbd4rbc2LxxTDFPf/fQ4c1rX71JuhEtC6qBMRUS/mWlM7t0DrIi/iPBJr/5a8U+rxyg9aU9ob5b2rtT5uuteSH7Smz+Lb3lXkTh4AAGf1y3uMtN8FLUj7UvP6ruVK3usthfM5rUnv+dbu/Lb+58s+XiRNCdw=
   </data>
  </layer>
- <layer id="2" name="Interactables" width="20" height="15">
+ <layer id="2" name="Interactables" width="200" height="150">
   <data encoding="base64" compression="zlib">
-   eJxjYCANLCRR/ah5o+aNmjd8zaM3AAB8Cwgu
+   eJzt0zERACAQwLD37wKnKOjABNwlCrp0BgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4My6HQAP8wc0f0DzBzR/QPMHNH9A8wc0f0DzBzR/QPMHNH8AwL82y24ILg==
   </data>
  </layer>
+ <objectgroup id="3" name="Objects">
+  <object id="1" name="tp1" type="teleport" x="1760" y="2320" width="32" height="32">
+   <properties>
+    <property name="anchor_x" type="float" value="0"/>
+    <property name="anchor_y" type="float" value="0"/>
+    <property name="dst" type="object" value="2"/>
+   </properties>
+  </object>
+  <object id="2" name="tp1b" type="teleport" x="1408" y="2320" width="32" height="32">
+   <properties>
+    <property name="anchor_x" type="float" value="1"/>
+    <property name="anchor_y" type="float" value="0"/>
+    <property name="dst" type="object" value="1"/>
+   </properties>
+  </object>
+  <object id="4" name="player_start" type="player_start" x="1560" y="2376">
+   <point/>
+  </object>
+ </objectgroup>
 </map>
