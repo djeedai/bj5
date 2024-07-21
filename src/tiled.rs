@@ -12,23 +12,22 @@
 //   * When the 'atlas' feature is enabled tilesets using a collection of images will be skipped.
 //   * Only finite tile layers are loaded. Infinite tile layers and object layers will be skipped.
 
-use std::io::{Cursor, ErrorKind};
-use std::path::Path;
-use std::sync::Arc;
+use std::{
+    io::{Cursor, ErrorKind},
+    path::Path,
+    sync::Arc,
+};
 
 use bevy::{
     asset::{io::Reader, AssetLoader, AssetPath, AsyncReadExt},
+    core::Name,
     log,
-    prelude::{
-        Added, Asset, AssetApp, AssetEvent, AssetId, Assets, Bundle, Commands, Component,
-        DespawnRecursiveExt, Entity, EventReader, GlobalTransform, Handle, Image, Plugin, Query,
-        Res, Transform, Update,
-    },
+    prelude::*,
     reflect::TypePath,
     utils::HashMap,
 };
 use bevy_ecs_tilemap::prelude::*;
-
+use bevy_rapier2d::prelude::*;
 use thiserror::Error;
 
 #[derive(Default, Component)]
@@ -320,7 +319,13 @@ pub fn process_loaded_maps(
                         let mut tile_storage = TileStorage::empty(map_size);
                         let layer_entity = commands.spawn_empty().id();
 
-                        let collision = layer.name == "Collision";
+                        let collision = layer.name == "Walls";
+                        let layer_transform = get_tilemap_center_transform(
+                            &map_size,
+                            &grid_size,
+                            &map_type,
+                            layer_index as f32,
+                        ) * Transform::from_xyz(offset_x, -offset_y, 0.0);
 
                         for x in 0..map_size.x {
                             for y in 0..map_size.y {
@@ -374,7 +379,27 @@ pub fn process_loaded_maps(
                                 tile_storage.set(&tile_pos, tile_entity);
 
                                 if collision {
-                                    commands.entity(tile_entity).insert(TileCollision);
+                                    let tile_pos: Vec2 = tile_pos.into();
+                                    let grid_size: Vec2 = grid_size.into();
+                                    let tile_pos2: Vec2 = tile_pos * grid_size
+                                        + Vec2::new(
+                                            layer_transform.translation.x,
+                                            layer_transform.translation.y,
+                                        );
+                                    trace!(
+                                        "tile_pos={:?} grid_size={:?} tile_pos2={:?}",
+                                        tile_pos,
+                                        grid_size,
+                                        tile_pos2
+                                    );
+                                    commands.spawn((
+                                        TileCollision,
+                                        Transform::from_xyz(tile_pos2.x, tile_pos2.y, 0.),
+                                        GlobalTransform::default(),
+                                        RigidBody::Fixed,
+                                        Collider::cuboid(8., 8.),
+                                        Name::new(format!("tile{}x{}", x, y)),
+                                    ));
                                 }
                             }
                         }
@@ -386,12 +411,7 @@ pub fn process_loaded_maps(
                             texture: tilemap_texture.clone(),
                             tile_size,
                             spacing: tile_spacing,
-                            transform: get_tilemap_center_transform(
-                                &map_size,
-                                &grid_size,
-                                &map_type,
-                                layer_index as f32,
-                            ) * Transform::from_xyz(offset_x, -offset_y, 0.0),
+                            transform: layer_transform,
                             map_type,
                             render_settings: *render_settings,
                             ..Default::default()

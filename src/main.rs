@@ -5,11 +5,13 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
 use bevy::asset::AssetMetaCheck;
+use bevy::log::LogPlugin;
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use bevy::window::WindowResolution;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_kira_audio::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 mod tiled;
 
@@ -33,6 +35,11 @@ fn main() {
                     meta_check: AssetMetaCheck::Never,
                     ..default()
                 })
+                .set(LogPlugin {
+                    level: bevy::log::Level::WARN,
+                    filter: "bj5=trace".to_string(),
+                    ..default()
+                })
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: String::from("bj5"),
@@ -48,6 +55,8 @@ fn main() {
         .add_plugins(bevy_ecs_tilemap::TilemapPlugin)
         .add_plugins(tiled::TiledMapPlugin)
         .add_plugins(AudioPlugin)
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(16.0))
+        .add_plugins(RapierDebugRenderPlugin::default())
         .insert_resource(ClearColor(Color::BLACK))
         .add_systems(Startup, setup)
         .add_systems(Update, close_on_esc)
@@ -103,6 +112,8 @@ fn setup(
         },
         AnimationIndices { first: 0, last: 3 },
         AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+        RigidBody::Dynamic,
+        Collider::ball(7.5),
     ));
 
     // Start background audio
