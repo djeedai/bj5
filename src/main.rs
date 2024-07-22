@@ -12,12 +12,32 @@ use bevy::window::WindowResolution;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_kira_audio::prelude::*;
 use bevy_rapier2d::prelude::*;
+use bevy_rapier2d::rapier::geometry::CollisionEventFlags;
 
 mod tiled;
 
 #[derive(Default, Component)]
 struct PlayerStart {
     pub position: Vec3,
+}
+
+#[derive(Component)]
+struct Teleporter {
+    pub target: Entity,
+}
+
+impl Default for Teleporter {
+    fn default() -> Self {
+        Self {
+            target: Entity::PLACEHOLDER,
+        }
+    }
+}
+
+impl Teleporter {
+    pub fn new(target: Entity) -> Self {
+        Self { target }
+    }
 }
 
 #[derive(Component, Reflect)]
@@ -87,6 +107,7 @@ fn main() {
         .add_systems(Update, close_on_esc)
         .add_systems(Update, animate_sprites)
         .add_systems(Update, player_input)
+        .add_systems(Update, teleport)
         .add_systems(PostUpdate, update_camera)
         .run();
 }
@@ -124,7 +145,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, _audio: Res<Aud
     ));
 
     // Start background audio
-    //audio.play(asset_server.load("background_audio.ogg")).looped();
+    // audio.play(asset_server.load("background_audio.ogg")).looped();
 }
 
 fn post_load_setup(
@@ -165,6 +186,7 @@ fn post_load_setup(
         RigidBody::Dynamic,
         Ccd::enabled(),
         ExternalImpulse::default(),
+        ActiveEvents::COLLISION_EVENTS,
         Collider::ball(7.5),
         Name::new("Player"),
         Player::default(),
@@ -203,12 +225,63 @@ fn player_input(
         dv.x += 1.;
     }
     if keyboard.just_pressed(KeyCode::Space) {
-        dv.y += 10.;
+        dv.y += 30.;
     }
-    trace!("dv: {:?}", dv);
+    //trace!("dv: {:?}", dv);
 
     if dv != Vec2::ZERO {
         impulse.impulse = dv * player.impulse_factor;
+    }
+}
+
+fn teleport(
+    q_teleporters: Query<(Entity, &mut Transform, &Teleporter), Without<Player>>,
+    mut q_player: Query<(Entity, &mut Transform), With<Player>>,
+    mut events: EventReader<CollisionEvent>,
+) {
+    let Ok((player_entity, mut player_transform)) = q_player.get_single_mut() else {
+        return;
+    };
+
+    for ev in events.read() {
+        match ev {
+            CollisionEvent::Started(e1, e2, flags) => {
+                trace!("Started: e1={:?} e2={:?} flags={:?}", e1, e2, flags);
+            }
+            CollisionEvent::Stopped(e1, e2, flags) => {
+                trace!("Stopped: e1={:?} e2={:?} flags={:?}", e1, e2, flags);
+                // Detect when player stops overlapping a teleporter
+                if flags.contains(CollisionEventFlags::SENSOR) {
+                    let mut e1 = *e1;
+                    let mut e2 = *e2;
+                    // Swap entities such that player is always #1 and TP is always #2
+                    if e2 == player_entity {
+                        std::mem::swap(&mut e1, &mut e2);
+                    }
+                    if e1 == player_entity {
+                        if let Ok(tp1) = q_teleporters.get(e2) {
+                            if let Ok(tp2) = q_teleporters.get(tp1.2.target) {
+                                // tp1 -> tp2
+
+                                // Find the exit side, to determine the teleport edge.
+                                let delta = player_transform.translation - tp1.1.translation;
+                                if delta.x > 0. {
+                                    // Exited to the right, so teleport to the right edge of tp2
+                                    let edge = tp2.1.translation + 16.; // TODO - width
+                                    player_transform.translation.x = edge.x + delta.x;
+                                    player_transform.translation.y = edge.y + delta.y;
+                                } else {
+                                    // Exited to the left, so teleport to the right left of tp2
+                                    let edge = tp2.1.translation - 16.; // TODO - width
+                                    player_transform.translation.x = edge.x + delta.x;
+                                    player_transform.translation.y = edge.y + delta.y;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -222,5 +295,7 @@ fn update_camera(
     let Ok(mut camera) = camera.get_single_mut() else {
         return;
     };
+    // TEMP: no smoothing or loose follow or any fancy setup, just stick to the
+    // player
     camera.translation = player.translation;
 }

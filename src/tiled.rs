@@ -1,16 +1,21 @@
 // How to use this:
-//   You should copy/paste this into your project and use it much like examples/tiles.rs uses this
-//   file. When you do so you will need to adjust the code based on whether you're using the
-//   'atlas` feature in bevy_ecs_tilemap. The bevy_ecs_tilemap uses this as an example of how to
-//   use both single image tilesets and image collection tilesets. Since your project won't have
-//   the 'atlas' feature defined in your Cargo config, the expressions prefixed by the #[cfg(...)]
-//   macro will not compile in your project as-is. If your project depends on the bevy_ecs_tilemap
-//   'atlas' feature then move all of the expressions prefixed by #[cfg(not(feature = "atlas"))].
-//   Otherwise remove all of the expressions prefixed by #[cfg(feature = "atlas")].
+//   You should copy/paste this into your project and use it much like
+// examples/tiles.rs uses this   file. When you do so you will need to adjust
+// the code based on whether you're using the   'atlas` feature in
+// bevy_ecs_tilemap. The bevy_ecs_tilemap uses this as an example of how to
+//   use both single image tilesets and image collection tilesets. Since your
+// project won't have   the 'atlas' feature defined in your Cargo config, the
+// expressions prefixed by the #[cfg(...)]   macro will not compile in your
+// project as-is. If your project depends on the bevy_ecs_tilemap
+//   'atlas' feature then move all of the expressions prefixed by
+// #[cfg(not(feature = "atlas"))].   Otherwise remove all of the expressions
+// prefixed by #[cfg(feature = "atlas")].
 //
 // Functional limitations:
-//   * When the 'atlas' feature is enabled tilesets using a collection of images will be skipped.
-//   * Only finite tile layers are loaded. Infinite tile layers and object layers will be skipped.
+//   * When the 'atlas' feature is enabled tilesets using a collection of images
+//     will be skipped.
+//   * Only finite tile layers are loaded. Infinite tile layers and object
+//     layers will be skipped.
 
 use std::{
     io::{Cursor, ErrorKind},
@@ -30,7 +35,7 @@ use bevy_ecs_tilemap::prelude::*;
 use bevy_rapier2d::prelude::*;
 use thiserror::Error;
 
-use crate::PlayerStart;
+use crate::{PlayerStart, Teleporter};
 
 #[derive(Default, Component)]
 pub struct TileCollision;
@@ -42,7 +47,7 @@ impl Plugin for TiledMapPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.init_asset::<TiledMap>()
             .register_asset_loader(TiledLoader)
-            .add_systems(PreUpdate, process_loaded_maps);
+            .add_systems(PreUpdate, (process_loaded_maps,));
     }
 }
 
@@ -143,8 +148,9 @@ impl AssetLoader for TiledLoader {
                         let mut tile_images: Vec<Handle<Image>> = Vec::new();
                         for (tile_id, tile) in tileset.tiles() {
                             if let Some(img) = &tile.image {
-                                // The load context path is the TMX file itself. If the file is at the root of the
-                                // assets/ directory structure then the tmx_dir will be empty, which is fine.
+                                // The load context path is the TMX file itself. If the file is at
+                                // the root of the assets/ directory
+                                // structure then the tmx_dir will be empty, which is fine.
                                 let tmx_dir = load_context
                                     .path()
                                     .parent()
@@ -163,8 +169,9 @@ impl AssetLoader for TiledLoader {
                     }
                 }
                 Some(img) => {
-                    // The load context path is the TMX file itself. If the file is at the root of the
-                    // assets/ directory structure then the tmx_dir will be empty, which is fine.
+                    // The load context path is the TMX file itself. If the file is at the root of
+                    // the assets/ directory structure then the tmx_dir will be
+                    // empty, which is fine.
                     let tmx_dir = load_context
                         .path()
                         .parent()
@@ -195,6 +202,16 @@ impl AssetLoader for TiledLoader {
         static EXTENSIONS: &[&str] = &["tmx"];
         EXTENSIONS
     }
+}
+
+fn get_teleporter_dst(obj: &tiled::Object) -> Option<u32> {
+    let Some(dst) = obj.properties.get("dst") else {
+        return None;
+    };
+    let tiled::PropertyValue::ObjectValue(other_id) = dst else {
+        return None;
+    };
+    Some(*other_id)
 }
 
 pub fn process_loaded_maps(
@@ -241,90 +258,102 @@ pub fn process_loaded_maps(
             if map_handle.id() != *changed_map {
                 continue;
             }
-            if let Some(tiled_map) = maps.get(map_handle) {
-                // TODO: Create a RemoveMap component..
-                for layer_entity in layer_storage.storage.values() {
-                    if let Ok((_, layer_tile_storage)) = tile_storage_query.get(*layer_entity) {
-                        for tile in layer_tile_storage.iter().flatten() {
-                            commands.entity(*tile).despawn_recursive()
-                        }
-                    }
-                    // commands.entity(*layer_entity).despawn_recursive();
-                }
 
-                // The TilemapBundle requires that all tile images come exclusively from a single
-                // tiled texture or from a Vec of independent per-tile images. Furthermore, all of
-                // the per-tile images must be the same size. Since Tiled allows tiles of mixed
-                // tilesets on each layer and allows differently-sized tile images in each tileset,
-                // this means we need to load each combination of tileset and layer separately.
-                for (tileset_index, tileset) in tiled_map.map.tilesets().iter().enumerate() {
-                    let Some(tilemap_texture) = tiled_map.tilemap_textures.get(&tileset_index)
-                    else {
-                        log::warn!("Skipped creating layer with missing tilemap textures.");
+            let Some(tiled_map) = maps.get(map_handle) else {
+                debug!(
+                    "Ignoring change to invalid Tiled map handle {:?}",
+                    map_handle
+                );
+                continue;
+            };
+
+            // TODO: Create a RemoveMap component..
+            for layer_entity in layer_storage.storage.values() {
+                if let Ok((_, layer_tile_storage)) = tile_storage_query.get(*layer_entity) {
+                    for tile in layer_tile_storage.iter().flatten() {
+                        commands.entity(*tile).despawn_recursive()
+                    }
+                }
+                // commands.entity(*layer_entity).despawn_recursive();
+            }
+
+            let map_size = TilemapSize {
+                x: tiled_map.map.width,
+                y: tiled_map.map.height,
+            };
+
+            let grid_size = TilemapGridSize {
+                x: tiled_map.map.tile_width as f32,
+                y: tiled_map.map.tile_height as f32,
+            };
+
+            // The TilemapBundle requires that all tile images come exclusively from a
+            // single tiled texture or from a Vec of independent per-tile
+            // images. Furthermore, all of the per-tile images must be the same
+            // size. Since Tiled allows tiles of mixed tilesets on each layer
+            // and allows differently-sized tile images in each tileset,
+            // this means we need to load each combination of tileset and layer separately.
+            for (tileset_index, tileset) in tiled_map.map.tilesets().iter().enumerate() {
+                let Some(tilemap_texture) = tiled_map.tilemap_textures.get(&tileset_index) else {
+                    warn!(
+                        "Skipped creating tileset #{tileset_index} with missing tilemap texture."
+                    );
+                    continue;
+                };
+
+                let tile_size = TilemapTileSize {
+                    x: tileset.tile_width as f32,
+                    y: tileset.tile_height as f32,
+                };
+
+                let tile_spacing = TilemapSpacing {
+                    x: tileset.spacing as f32,
+                    y: tileset.spacing as f32,
+                };
+
+                // Once materials have been created/added we need to then create the layers.
+                for (layer_index, layer) in tiled_map.map.layers().enumerate() {
+                    // Only process tile layers here; other types of layers don't need the double
+                    // loop on tilesets, and are done separately below.
+                    let tiled::LayerType::Tiles(tile_layer) = layer.layer_type() else {
                         continue;
                     };
 
-                    let tile_size = TilemapTileSize {
-                        x: tileset.tile_width as f32,
-                        y: tileset.tile_height as f32,
-                    };
+                    let offset_x = layer.offset_x;
+                    let offset_y = layer.offset_y;
 
-                    let tile_spacing = TilemapSpacing {
-                        x: tileset.spacing as f32,
-                        y: tileset.spacing as f32,
-                    };
+                    trace!(
+                        "Processing layer #{} '{}' at offset {}x{}...",
+                        layer_index,
+                        layer.name,
+                        offset_x,
+                        offset_y
+                    );
 
-                    // Once materials have been created/added we need to then create the layers.
-                    for (layer_index, layer) in tiled_map.map.layers().enumerate() {
-                        let offset_x = layer.offset_x;
-                        let offset_y = layer.offset_y;
-
-                        trace!(
-                            "Processing layer #{} '{}' at offset {}x{}...",
-                            layer_index,
-                            layer.name,
-                            offset_x,
-                            offset_y
+                    let tiled::TileLayer::Finite(layer_data) = tile_layer else {
+                        info!(
+                            "Skipping layer {} because only finite layers are supported.",
+                            layer.id()
                         );
+                        continue;
+                    };
 
-                        let map_size = TilemapSize {
-                            x: tiled_map.map.width,
-                            y: tiled_map.map.height,
-                        };
+                    let map_type = match tiled_map.map.orientation {
+                        tiled::Orientation::Hexagonal => TilemapType::Hexagon(HexCoordSystem::Row),
+                        tiled::Orientation::Isometric => {
+                            TilemapType::Isometric(IsoCoordSystem::Diamond)
+                        }
+                        tiled::Orientation::Staggered => {
+                            TilemapType::Isometric(IsoCoordSystem::Staggered)
+                        }
+                        tiled::Orientation::Orthogonal => TilemapType::Square,
+                    };
 
-                        let grid_size = TilemapGridSize {
-                            x: tiled_map.map.tile_width as f32,
-                            y: tiled_map.map.tile_height as f32,
-                        };
+                    let mut tile_storage = TileStorage::empty(map_size);
+                    let layer_entity = commands.spawn_empty().id();
 
-                        match layer.layer_type() {
-                            tiled::LayerType::Tiles(tile_layer) => {
-                                let tiled::TileLayer::Finite(layer_data) = tile_layer else {
-                                    info!(
-                                        "Skipping layer {} because only finite layers are supported.",
-                                        layer.id()
-                                    );
-                                    continue;
-                                };
-
-                                let map_type = match tiled_map.map.orientation {
-                                    tiled::Orientation::Hexagonal => {
-                                        TilemapType::Hexagon(HexCoordSystem::Row)
-                                    }
-                                    tiled::Orientation::Isometric => {
-                                        TilemapType::Isometric(IsoCoordSystem::Diamond)
-                                    }
-                                    tiled::Orientation::Staggered => {
-                                        TilemapType::Isometric(IsoCoordSystem::Staggered)
-                                    }
-                                    tiled::Orientation::Orthogonal => TilemapType::Square,
-                                };
-
-                                let mut tile_storage = TileStorage::empty(map_size);
-                                let layer_entity = commands.spawn_empty().id();
-
-                                let collision = layer.name == "Walls";
-                                let layer_transform =
+                    let collision = layer.name == "Walls";
+                    let layer_transform =
                                     // get_tilemap_center_transform(
                                     //     &map_size,
                                     //     &grid_size,
@@ -333,33 +362,29 @@ pub fn process_loaded_maps(
                                     // ) * 
                                     Transform::from_xyz(offset_x, -offset_y, 0.0);
 
-                                for x in 0..map_size.x {
-                                    for y in 0..map_size.y {
-                                        // Transform TMX coords into bevy coords.
-                                        let mapped_y = tiled_map.map.height - 1 - y;
+                    for x in 0..map_size.x {
+                        for y in 0..map_size.y {
+                            // Transform TMX coords into bevy coords.
+                            let mapped_y = tiled_map.map.height - 1 - y;
 
-                                        let mapped_x = x as i32;
-                                        let mapped_y = mapped_y as i32;
+                            let mapped_x = x as i32;
+                            let mapped_y = mapped_y as i32;
 
-                                        let layer_tile =
-                                            match layer_data.get_tile(mapped_x, mapped_y) {
-                                                Some(t) => t,
-                                                None => {
-                                                    continue;
-                                                }
-                                            };
-                                        if tileset_index != layer_tile.tileset_index() {
-                                            continue;
-                                        }
-                                        let layer_tile_data =
-                                            match layer_data.get_tile_data(mapped_x, mapped_y) {
-                                                Some(d) => d,
-                                                None => {
-                                                    continue;
-                                                }
-                                            };
+                            let Some(layer_tile) = layer_data.get_tile(mapped_x, mapped_y) else {
+                                continue;
+                            };
 
-                                        let texture_index = match tilemap_texture {
+                            if tileset_index != layer_tile.tileset_index() {
+                                continue;
+                            }
+
+                            let Some(layer_tile_data) =
+                                layer_data.get_tile_data(mapped_x, mapped_y)
+                            else {
+                                continue;
+                            };
+
+                            let texture_index = match tilemap_texture {
                                             TilemapTexture::Single(_) => layer_tile.id(),
                                             #[cfg(not(feature = "atlas"))]
                                             TilemapTexture::Vector(_) =>
@@ -369,111 +394,126 @@ pub fn process_loaded_maps(
                                             _ => unreachable!()
                                         };
 
-                                        let tile_pos = TilePos { x, y };
-                                        let tile_entity = commands
-                                            .spawn(TileBundle {
-                                                position: tile_pos,
-                                                tilemap_id: TilemapId(layer_entity),
-                                                texture_index: TileTextureIndex(texture_index),
-                                                flip: TileFlip {
-                                                    x: layer_tile_data.flip_h,
-                                                    y: layer_tile_data.flip_v,
-                                                    d: layer_tile_data.flip_d,
-                                                },
-                                                ..Default::default()
-                                            })
-                                            .id();
-                                        tile_storage.set(&tile_pos, tile_entity);
-
-                                        if collision {
-                                            let tile_pos: Vec2 = tile_pos.into();
-                                            let grid_size: Vec2 = grid_size.into();
-                                            let tile_pos2: Vec2 = tile_pos * grid_size
-                                                + Vec2::new(
-                                                    layer_transform.translation.x,
-                                                    layer_transform.translation.y,
-                                                );
-                                            // trace!(
-                                            //     "tile_pos={:?} grid_size={:?} tile_pos2={:?}",
-                                            //     tile_pos,
-                                            //     grid_size,
-                                            //     tile_pos2
-                                            // );
-                                            commands.spawn((
-                                                TileCollision,
-                                                Transform::from_xyz(tile_pos2.x, tile_pos2.y, 0.),
-                                                GlobalTransform::default(),
-                                                RigidBody::Fixed,
-                                                Collider::cuboid(8., 8.),
-                                                Name::new(format!("tile{}x{}", x, y)),
-                                            ));
-                                        }
-                                    }
-                                }
-
-                                commands.entity(layer_entity).insert(TilemapBundle {
-                                    grid_size,
-                                    size: map_size,
-                                    storage: tile_storage,
-                                    texture: tilemap_texture.clone(),
-                                    tile_size,
-                                    spacing: tile_spacing,
-                                    transform: layer_transform,
-                                    map_type,
-                                    render_settings: *render_settings,
+                            let tile_pos = TilePos { x, y };
+                            let tile_entity = commands
+                                .spawn(TileBundle {
+                                    position: tile_pos,
+                                    tilemap_id: TilemapId(layer_entity),
+                                    texture_index: TileTextureIndex(texture_index),
+                                    flip: TileFlip {
+                                        x: layer_tile_data.flip_h,
+                                        y: layer_tile_data.flip_v,
+                                        d: layer_tile_data.flip_d,
+                                    },
                                     ..Default::default()
-                                });
+                                })
+                                .id();
+                            tile_storage.set(&tile_pos, tile_entity);
 
-                                layer_storage
-                                    .storage
-                                    .insert(layer_index as u32, layer_entity);
+                            if collision {
+                                let tile_pos: Vec2 = tile_pos.into();
+                                let grid_size: Vec2 = grid_size.into();
+                                let tile_pos2: Vec2 = tile_pos * grid_size
+                                    + Vec2::new(
+                                        layer_transform.translation.x,
+                                        layer_transform.translation.y,
+                                    );
+                                // trace!(
+                                //     "tile_pos={:?} grid_size={:?} tile_pos2={:?}",
+                                //     tile_pos,
+                                //     grid_size,
+                                //     tile_pos2
+                                // );
+                                commands.spawn((
+                                    TileCollision,
+                                    Transform::from_xyz(tile_pos2.x, tile_pos2.y, 0.),
+                                    GlobalTransform::default(),
+                                    RigidBody::Fixed,
+                                    Collider::cuboid(8., 8.),
+                                    Name::new(format!("tile{}x{}", x, y)),
+                                ));
                             }
-
-                            // Object layer
-                            tiled::LayerType::Objects(object_layer) => {
-                                for obj in object_layer.objects() {
-                                    trace!("Object: {} #{}", obj.name, obj.user_type);
-                                    let x = obj.x - grid_size.x / 2.;
-                                    let y = tiled_map.map.height as f32 * tile_size.y
-                                        - obj.y
-                                        - grid_size.y / 2.;
-                                    let position = Vec2::new(x, y).extend(layer_index as f32);
-                                    if obj.user_type == "player_start" {
-                                        commands.spawn((
-                                            PlayerStart { position },
-                                            Name::new(obj.name.clone()),
-                                        ));
-                                    } else if obj.user_type == "teleport" {
-                                        let tiled::ObjectShape::Rect { width, height } = &obj.shape
-                                        else {
-                                            continue;
-                                        };
-                                        let offset = Vec3::new(width / 2., -height / 2., 0.);
-                                        commands.spawn((
-                                            TransformBundle::from(Transform::from_translation(
-                                                position + offset,
-                                            )),
-                                            Collider::cuboid(16., 16.),
-                                            Sensor,
-                                            Name::new(obj.name.clone()),
-                                        ));
-                                    } else {
-                                        debug!(
-                                            "Ignoring unknown object '{}' of class '{}'",
-                                            obj.name, obj.user_type
-                                        );
-                                    }
-                                }
-                            }
-
-                            // Other types of layers
-                            _ => debug!(
-                                "Skipping layer {} of type {:?}",
-                                layer.name,
-                                layer.layer_type()
-                            ),
                         }
                     }
+
+                    commands.entity(layer_entity).insert(TilemapBundle {
+                        grid_size,
+                        size: map_size,
+                        storage: tile_storage,
+                        texture: tilemap_texture.clone(),
+                        tile_size,
+                        spacing: tile_spacing,
+                        transform: layer_transform,
+                        map_type,
+                        render_settings: *render_settings,
+                        ..Default::default()
+                    });
+
+                    layer_storage
+                        .storage
+                        .insert(layer_index as u32, layer_entity);
+                }
+            }
+
+            // Process object layers (once only)
+            let mut tp_map = HashMap::new();
+            for (layer_index, layer) in tiled_map.map.layers().enumerate() {
+                let tiled::LayerType::Objects(object_layer) = layer.layer_type() else {
+                    continue;
+                };
+
+                for obj in object_layer.objects() {
+                    trace!("Object: {} #{}", obj.name, obj.user_type);
+
+                    let x = obj.x - grid_size.x / 2.;
+                    let y = map_size.y as f32 * grid_size.y - obj.y - grid_size.y / 2.;
+                    let position = Vec2::new(x, y).extend(layer_index as f32);
+
+                    if obj.user_type == "player_start" {
+                        commands.spawn((PlayerStart { position }, Name::new(obj.name.clone())));
+                    } else if obj.user_type == "teleport" {
+                        let tiled::ObjectShape::Rect { width, height } = &obj.shape else {
+                            continue;
+                        };
+
+                        let offset = Vec3::new(width / 2., -height / 2., 0.);
+                        let Some(dst_id) = get_teleporter_dst(&obj) else {
+                            warn!("Teleporter #{} is missing a 'dst' property.", obj.id());
+                            continue;
+                        };
+                        let entity = commands
+                            .spawn((
+                                TransformBundle::from(Transform::from_translation(
+                                    position + offset,
+                                )),
+                                Collider::cuboid(16., 16.),
+                                Sensor,
+                                Name::new(obj.name.clone()),
+                            ))
+                            .id();
+                        tp_map.insert(obj.id(), (entity, dst_id));
+                    } else {
+                        debug!(
+                            "Ignoring unknown object '{}' of class '{}'",
+                            obj.name, obj.user_type
+                        );
+                    }
+                }
+            }
+
+            // Resolve teleporters
+            for (id, (entity, dst_id)) in &tp_map {
+                if let Some((dst_entity, src_id)) = tp_map.get(dst_id) {
+                    assert_eq!(*src_id, *id);
+                    info!(
+                        "Adding teleporter to entity {:?} -> {:?}",
+                        entity, dst_entity
+                    );
+                    commands
+                        .entity(*entity)
+                        .insert(Teleporter::new(*dst_entity));
+                } else {
+                    warn!("Teleporter #{} has unknown destination #{}", id, *dst_id);
                 }
             }
         }
