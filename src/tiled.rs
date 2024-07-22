@@ -486,11 +486,21 @@ pub fn process_loaded_maps(
                                 TransformBundle::from(Transform::from_translation(
                                     position + offset,
                                 )),
-                                Collider::cuboid(16., 16.),
+                                Collider::cuboid(width / 2., height / 2.),
                                 Sensor,
                                 Name::new(obj.name.clone()),
                             ))
                             .id();
+                        trace!(
+                            "Spawned teleporter #{} '{}' entity {:?} at {:?} ({:?} + {:?}) -> {}",
+                            obj.id(),
+                            obj.name,
+                            entity,
+                            position + offset,
+                            position,
+                            offset,
+                            dst_id,
+                        );
                         tp_map.insert(obj.id(), (entity, dst_id));
                     } else {
                         debug!(
