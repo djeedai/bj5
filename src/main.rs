@@ -267,12 +267,14 @@ fn teleport(
                                 let delta = player_transform.translation - tp1.1.translation;
                                 if delta.x > 0. {
                                     // Exited to the right, so teleport to the right edge of tp2
-                                    let edge = tp2.1.translation + 16.; // TODO - width
+                                    let edge = tp2.1.translation; // TODO - width of TP
+                                    debug!("Teleport player from TP {:?} at delta {:?} to TP {:?} at {:?}", tp1.0, delta, tp2.0, edge + delta);
                                     player_transform.translation.x = edge.x + delta.x;
                                     player_transform.translation.y = edge.y + delta.y;
                                 } else {
                                     // Exited to the left, so teleport to the right left of tp2
-                                    let edge = tp2.1.translation - 16.; // TODO - width
+                                    let edge = tp2.1.translation; // TODO - width of TP
+                                    debug!("Teleport player from TP {:?} at delta {:?} to TP {:?} at {:?}", tp1.0, delta, tp2.0, edge + delta);
                                     player_transform.translation.x = edge.x + delta.x;
                                     player_transform.translation.y = edge.y + delta.y;
                                 }
