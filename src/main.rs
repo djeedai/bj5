@@ -10,11 +10,15 @@ use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use bevy::window::WindowResolution;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_keith::{Canvas, KeithPlugin};
 use bevy_kira_audio::prelude::*;
 use bevy_rapier2d::prelude::*;
 use bevy_rapier2d::rapier::geometry::CollisionEventFlags;
 
 mod tiled;
+
+#[derive(Default, Component)]
+struct MainCamera {}
 
 #[derive(Default, Component)]
 struct PlayerStart {
@@ -62,6 +66,11 @@ struct AnimationIndices {
 #[derive(Component, Deref, DerefMut)]
 struct AnimationTimer(Timer);
 
+#[derive(Resource)]
+struct UiRes {
+    pub font: Handle<Font>,
+}
+
 fn main() {
     App::new()
         .add_plugins(
@@ -93,6 +102,7 @@ fn main() {
         .add_plugins(bevy_ecs_tilemap::TilemapPlugin)
         .add_plugins(tiled::TiledMapPlugin)
         .add_plugins(AudioPlugin)
+        .add_plugins(KeithPlugin)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(16.0))
         .add_plugins(RapierDebugRenderPlugin {
             mode: DebugRenderMode::default()
@@ -108,6 +118,7 @@ fn main() {
         .add_systems(Update, animate_sprites)
         .add_systems(Update, player_input)
         .add_systems(Update, teleport)
+        .add_systems(Update, main_ui)
         .add_systems(PostUpdate, update_camera)
         .run();
 }
@@ -131,7 +142,28 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, _audio: Res<Aud
             },
             ..default()
         },
+        MainCamera {},
         Name::new("Camera"),
+    ));
+
+    commands.spawn((
+        Camera2dBundle {
+            camera: Camera {
+                order: 100,
+                ..default()
+            },
+            projection: OrthographicProjection {
+                scale: 1.0,
+                near: -1000.0,
+                far: 1000.0,
+                viewport_origin: Vec2::new(0.5, 0.5),
+                scaling_mode: ScalingMode::WindowSize(1.0),
+                ..default()
+            },
+            ..default()
+        },
+        Canvas::default(),
+        Name::new("UICamera"),
     ));
 
     // Load map
@@ -153,7 +185,7 @@ fn post_load_setup(
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     q_player_start: Query<&PlayerStart, Added<PlayerStart>>,
-    mut q_camera: Query<&mut Transform, With<Camera>>,
+    mut q_camera: Query<&mut Transform, With<MainCamera>>,
 ) {
     let Ok(player_start) = q_player_start.get_single() else {
         return;
@@ -288,8 +320,8 @@ fn teleport(
 }
 
 fn update_camera(
-    player: Query<&Transform, (With<Player>, Without<Camera>)>,
-    mut camera: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+    player: Query<&Transform, (With<Player>, Without<MainCamera>)>,
+    mut camera: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
 ) {
     let Ok(player) = player.get_single() else {
         return;
@@ -300,4 +332,22 @@ fn update_camera(
     // TEMP: no smoothing or loose follow or any fancy setup, just stick to the
     // player
     camera.translation = player.translation;
+}
+
+fn main_ui(mut q_canvas: Query<&mut Canvas>) {
+    let mut canvas = q_canvas.single_mut();
+    canvas.clear();
+
+    let mut ctx = canvas.render_context();
+    let txt = ctx
+        .new_layout("Time: 017")
+        .font_size(16.)
+        .color(Color::WHITE)
+        .alignment(JustifyText::Left)
+        .bounds(Vec2::new(100., 20.))
+        .build();
+    ctx.draw_text(txt, Vec2::new(-430., -340.));
+
+    let brush = ctx.solid_brush(Color::WHITE);
+    ctx.fill(Rect::new(0., 0., 160., 120.), &brush);
 }
