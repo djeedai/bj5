@@ -34,8 +34,9 @@ use bevy::{
 use bevy_ecs_tilemap::prelude::*;
 use bevy_rapier2d::prelude::*;
 use thiserror::Error;
+use tiled::Tile;
 
-use crate::{PlayerStart, Teleporter};
+use crate::{EpochSprite, PlayerStart, Teleporter};
 
 #[derive(Default, Component)]
 pub struct TileCollision;
@@ -214,6 +215,16 @@ fn get_teleporter_dst(obj: &tiled::Object) -> Option<u32> {
     Some(*other_id)
 }
 
+fn get_epoch_prop(tile: &Tile) -> Option<i32> {
+    let Some(epoch) = tile.properties.get("epoch") else {
+        return None;
+    };
+    let tiled::PropertyValue::IntValue(epoch_id) = epoch else {
+        return None;
+    };
+    Some(*epoch_id)
+}
+
 pub fn process_loaded_maps(
     mut commands: Commands,
     mut map_events: EventReader<AssetEvent<TiledMap>>,
@@ -384,6 +395,12 @@ pub fn process_loaded_maps(
                                 continue;
                             };
 
+                            let tile_id = layer_tile_data.id();
+                            let Some(tile) = tileset.get_tile(tile_id) else {
+                                continue;
+                            };
+                            let epoch = get_epoch_prop(&tile);
+
                             let texture_index = match tilemap_texture {
                                             TilemapTexture::Single(_) => layer_tile.id(),
                                             #[cfg(not(feature = "atlas"))]
@@ -395,19 +412,25 @@ pub fn process_loaded_maps(
                                         };
 
                             let tile_pos = TilePos { x, y };
-                            let tile_entity = commands
-                                .spawn(TileBundle {
-                                    position: tile_pos,
-                                    tilemap_id: TilemapId(layer_entity),
-                                    texture_index: TileTextureIndex(texture_index),
-                                    flip: TileFlip {
-                                        x: layer_tile_data.flip_h,
-                                        y: layer_tile_data.flip_v,
-                                        d: layer_tile_data.flip_d,
-                                    },
-                                    ..Default::default()
-                                })
-                                .id();
+                            let mut ent_cmds = commands.spawn(TileBundle {
+                                position: tile_pos,
+                                tilemap_id: TilemapId(layer_entity),
+                                texture_index: TileTextureIndex(texture_index),
+                                flip: TileFlip {
+                                    x: layer_tile_data.flip_h,
+                                    y: layer_tile_data.flip_v,
+                                    d: layer_tile_data.flip_d,
+                                },
+                                ..Default::default()
+                            });
+                            if let Some(_epoch_id) = epoch {
+                                // FIXME: unused
+                                ent_cmds.insert(EpochSprite {
+                                    first: tile_id as usize,
+                                    last: tile_id as usize + 2, // FIXME: hard-coded
+                                });
+                            }
+                            let tile_entity = ent_cmds.id();
                             tile_storage.set(&tile_pos, tile_entity);
 
                             if collision {

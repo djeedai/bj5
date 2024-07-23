@@ -52,3 +52,9 @@ pub struct AnimationIndices {
 
 #[derive(Component, Deref, DerefMut)]
 pub struct AnimationTimer(pub Timer);
+
+#[derive(Default, Component)]
+pub struct EpochSprite {
+    pub first: usize,
+    pub last: usize,
+}

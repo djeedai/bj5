@@ -4,6 +4,7 @@ use bevy::{
     asset::AssetMetaCheck, log::LogPlugin, prelude::*, render::camera::ScalingMode,
     window::WindowResolution,
 };
+use bevy_ecs_tilemap::{map::TilemapId, tiles::TileTextureIndex};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_keith::{Canvas, KeithPlugin};
 use bevy_kira_audio::prelude::*;
@@ -13,6 +14,7 @@ mod components;
 mod tiled;
 
 pub use components::*;
+pub use tiled::*;
 
 #[derive(Resource)]
 struct UiRes {
@@ -218,11 +220,13 @@ fn teleport(
     q_teleporters: Query<(Entity, &mut Transform, &Teleporter), Without<Player>>,
     mut q_player: Query<(Entity, &mut Transform, &mut Player)>,
     mut events: EventReader<CollisionEvent>,
+    mut q_epoch_sprites: Query<(&EpochSprite, &mut TileTextureIndex)>,
 ) {
     let Ok((player_entity, mut player_transform, mut player)) = q_player.get_single_mut() else {
         return;
     };
 
+    let mut tp_dir = 0;
     for ev in events.read() {
         match ev {
             CollisionEvent::Started(e1, e2, flags) => {
@@ -283,9 +287,31 @@ fn teleport(
                                     player_transform.translation.x = edge.x + delta.x;
                                     player_transform.translation.y = edge.y + delta.y;
                                 }
+
+                                tp_dir = if tp2.1.translation.x > tp1.1.translation.x {
+                                    1
+                                } else {
+                                    -1
+                                };
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // Change epoch
+    if tp_dir != 0 {
+        debug!("Age all epoch sprites: {tp_dir}");
+        for (epoch_sprite, mut tile_tex_id) in &mut q_epoch_sprites {
+            if tp_dir > 0 {
+                if tile_tex_id.0 < epoch_sprite.last as u32 {
+                    tile_tex_id.0 += 1;
+                }
+            } else {
+                if tile_tex_id.0 > epoch_sprite.first as u32 {
+                    tile_tex_id.0 -= 1;
                 }
             }
         }

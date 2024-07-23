@@ -2,6 +2,21 @@
 <map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="200" height="150" tilewidth="16" tileheight="16" infinite="0" nextlayerid="4" nextobjectid="9">
  <tileset firstgid="1" name="tileset1" tilewidth="16" tileheight="16" tilecount="256" columns="16">
   <image source="tileset1.png" width="256" height="256"/>
+  <tile id="160">
+   <properties>
+    <property name="epoch" type="int" value="0"/>
+   </properties>
+  </tile>
+  <tile id="161">
+   <properties>
+    <property name="epoch" type="int" value="1"/>
+   </properties>
+  </tile>
+  <tile id="162">
+   <properties>
+    <property name="epoch" type="int" value="2"/>
+   </properties>
+  </tile>
   <tile id="248">
    <objectgroup draworder="index" id="2">
     <object id="3" x="0" y="0" width="16" height="16"/>
@@ -10,12 +25,12 @@
  </tileset>
  <layer id="1" name="Walls" width="200" height="150">
   <data encoding="base64" compression="zlib">
-   eJzt2UFuwjAQBdAEeoGWcgDuf8kmKpaq0diBlkUneU+aBUT5qy/LDNMEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABUcHti5mXO9/fe7p/j8zn5vkouRGtvHunaefD+nDyvmAuZ96l//mZd2msuZOLd41Udq5YLI2vvHu3Z5zKnZS47zIXm+sv3ft5xTskcJZd9+9h43s7dNu383fqdvLdcjqnXi9azdr/PepTtTLf6Vi2XY+vdN+IuqLcXXfX2SdVyIZqTeXYX1Lq4Nf89FwDgFeKe5696+6MKuRDF/c3al173Ykez6e2FKuRCFPdCox3R6P+D0VTJ5dsXefAiXg==
+   eJzt21tug0AMBVBIuoG+FtD9b7JB7Sgjy0MgoioD50j+ycPKh2+hzmQYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADW+bjV5Vbv//1BYIdeb/X1W5dBVjivcq2oM/Ay3PNR6q16fXkMjq6+VrxVj08ZGau6Jq+XEXp2WVDZNWJOzIeM0KM4w0urzk72P0eWj6xgz57NRysvJStL8yEn7NlW+Yj3XmvzISPs0Z7yISP8lTUzOA73PVPZP8Xnx+TxXvpClH0XkdV15v1j8nyPfSHTuqcpf1tbs3a0vpCJ9x5bzVhvfWHONHdL52zNGcPe+kLx+eT7sjOGdZ2lL8f26MxHfb7w0RnDuo7Wl3NqzUWZs3J/n81RtjN9NG+99eXcWvcbcRfU2otOWvuk3vpCNCa1dhcUz6q3au99AQC2sPXvv1v7ox76QhT3N9O8tGYvzuij3wv21heiuBea2xHNfX8wV7305cc3SH01uA==
   </data>
  </layer>
  <layer id="2" name="Interactables" width="200" height="150">
   <data encoding="base64" compression="zlib">
-   eJzt0zERACAQwLD37wKnKOjABNwlCrp0BgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4My6HQAP8wc0f0DzBzR/QPMHNH9A8wc0f0DzBzR/QPMHNH8AwL82y24ILg==
+   eJzt0zkRADAMwLDwZ1GmReC5z0kIvHgGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/rdOB8DF/AHNH9D8Ac0f0PwBzR/Q/AHNH9D8Ac0f0PwBzR/Q/AHNH9D8AQDv2grEChE=
   </data>
  </layer>
  <objectgroup id="3" name="Objects">
