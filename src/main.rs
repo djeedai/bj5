@@ -47,12 +47,16 @@ impl Teleporter {
 #[derive(Component, Reflect)]
 struct Player {
     pub impulse_factor: f32,
+    /// Side from which the player entered the last teleporter, to determine if
+    /// it exited on the opposite side and therefore if teleportation is needed.
+    pub teleporter_side: f32,
 }
 
 impl Default for Player {
     fn default() -> Self {
         Self {
             impulse_factor: 500.,
+            teleporter_side: 0.,
         }
     }
 }
@@ -259,7 +263,7 @@ fn player_input(
     if keyboard.just_pressed(KeyCode::Space) {
         dv.y += 30.;
     }
-    //trace!("dv: {:?}", dv);
+    // trace!("dv: {:?}", dv);
 
     if dv != Vec2::ZERO {
         impulse.impulse = dv * player.impulse_factor;
@@ -268,20 +272,17 @@ fn player_input(
 
 fn teleport(
     q_teleporters: Query<(Entity, &mut Transform, &Teleporter), Without<Player>>,
-    mut q_player: Query<(Entity, &mut Transform), With<Player>>,
+    mut q_player: Query<(Entity, &mut Transform, &mut Player)>,
     mut events: EventReader<CollisionEvent>,
 ) {
-    let Ok((player_entity, mut player_transform)) = q_player.get_single_mut() else {
+    let Ok((player_entity, mut player_transform, mut player)) = q_player.get_single_mut() else {
         return;
     };
 
     for ev in events.read() {
         match ev {
             CollisionEvent::Started(e1, e2, flags) => {
-                trace!("Started: e1={:?} e2={:?} flags={:?}", e1, e2, flags);
-            }
-            CollisionEvent::Stopped(e1, e2, flags) => {
-                trace!("Stopped: e1={:?} e2={:?} flags={:?}", e1, e2, flags);
+                // trace!("Started: e1={:?} e2={:?} flags={:?}", e1, e2, flags);
                 // Detect when player stops overlapping a teleporter
                 if flags.contains(CollisionEventFlags::SENSOR) {
                     let mut e1 = *e1;
@@ -292,11 +293,37 @@ fn teleport(
                     }
                     if e1 == player_entity {
                         if let Ok(tp1) = q_teleporters.get(e2) {
+                            // Save the teleporter enter side
+                            player.teleporter_side =
+                                player_transform.translation.x - tp1.1.translation.x;
+                        }
+                    }
+                }
+            }
+            CollisionEvent::Stopped(e1, e2, flags) => {
+                // trace!("Stopped: e1={:?} e2={:?} flags={:?}", e1, e2, flags);
+                // Detect when player stops overlapping a teleporter
+                if flags.contains(CollisionEventFlags::SENSOR) {
+                    let mut e1 = *e1;
+                    let mut e2 = *e2;
+                    // Swap entities such that player is always #1 and TP is always #2
+                    if e2 == player_entity {
+                        std::mem::swap(&mut e1, &mut e2);
+                    }
+                    if e1 == player_entity {
+                        if let Ok(tp1) = q_teleporters.get(e2) {
+                            // Find the exit side, to determine the teleport edge.
+                            let delta = player_transform.translation - tp1.1.translation;
+
+                            // If the player exits from the same side it entered, ignore.
+                            if delta.x * player.teleporter_side >= 0. {
+                                player.teleporter_side = 0.;
+                                continue;
+                            }
+
                             if let Ok(tp2) = q_teleporters.get(tp1.2.target) {
                                 // tp1 -> tp2
 
-                                // Find the exit side, to determine the teleport edge.
-                                let delta = player_transform.translation - tp1.1.translation;
                                 if delta.x > 0. {
                                     // Exited to the right, so teleport to the right edge of tp2
                                     let edge = tp2.1.translation; // TODO - width of TP
