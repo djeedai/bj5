@@ -1,74 +1,18 @@
-// Bevy code commonly triggers these lints and they may be important signals
-// about code quality. They are sometimes hard to avoid though, and the CI
-// workflow treats them as errors, so this allows them throughout the project.
-// Feel free to delete this line.
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
-use bevy::asset::AssetMetaCheck;
-use bevy::log::LogPlugin;
-use bevy::prelude::*;
-use bevy::render::camera::ScalingMode;
-use bevy::window::WindowResolution;
+use bevy::{
+    asset::AssetMetaCheck, log::LogPlugin, prelude::*, render::camera::ScalingMode,
+    window::WindowResolution,
+};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_keith::{Canvas, KeithPlugin};
 use bevy_kira_audio::prelude::*;
-use bevy_rapier2d::prelude::*;
-use bevy_rapier2d::rapier::geometry::CollisionEventFlags;
+use bevy_rapier2d::{prelude::*, rapier::geometry::CollisionEventFlags};
 
+mod components;
 mod tiled;
 
-#[derive(Default, Component)]
-struct MainCamera {}
-
-#[derive(Default, Component)]
-struct PlayerStart {
-    pub position: Vec3,
-}
-
-#[derive(Component)]
-struct Teleporter {
-    pub target: Entity,
-}
-
-impl Default for Teleporter {
-    fn default() -> Self {
-        Self {
-            target: Entity::PLACEHOLDER,
-        }
-    }
-}
-
-impl Teleporter {
-    pub fn new(target: Entity) -> Self {
-        Self { target }
-    }
-}
-
-#[derive(Component, Reflect)]
-struct Player {
-    pub impulse_factor: f32,
-    /// Side from which the player entered the last teleporter, to determine if
-    /// it exited on the opposite side and therefore if teleportation is needed.
-    pub teleporter_side: f32,
-}
-
-impl Default for Player {
-    fn default() -> Self {
-        Self {
-            impulse_factor: 500.,
-            teleporter_side: 0.,
-        }
-    }
-}
-
-#[derive(Component)]
-struct AnimationIndices {
-    first: usize,
-    last: usize,
-}
-
-#[derive(Component, Deref, DerefMut)]
-struct AnimationTimer(Timer);
+pub use components::*;
 
 #[derive(Resource)]
 struct UiRes {
@@ -283,7 +227,8 @@ fn teleport(
         match ev {
             CollisionEvent::Started(e1, e2, flags) => {
                 // trace!("Started: e1={:?} e2={:?} flags={:?}", e1, e2, flags);
-                // Detect when player stops overlapping a teleporter
+
+                // Detect when player starts overlapping a teleporter
                 if flags.contains(CollisionEventFlags::SENSOR) {
                     let mut e1 = *e1;
                     let mut e2 = *e2;
@@ -302,6 +247,7 @@ fn teleport(
             }
             CollisionEvent::Stopped(e1, e2, flags) => {
                 // trace!("Stopped: e1={:?} e2={:?} flags={:?}", e1, e2, flags);
+
                 // Detect when player stops overlapping a teleporter
                 if flags.contains(CollisionEventFlags::SENSOR) {
                     let mut e1 = *e1;
