@@ -70,6 +70,7 @@ fn main() {
         .add_systems(Update, teleport)
         .add_systems(Update, main_ui)
         .add_systems(PostUpdate, update_camera)
+        .add_systems(PostUpdate, apply_epoch)
         .run();
 }
 
@@ -115,6 +116,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, _audio: Res<Aud
         Canvas::default(),
         Name::new("UICamera"),
     ));
+
+    commands.spawn(Epoch::default());
 
     // Load map
     let map_handle: Handle<tiled::TiledMap> = asset_server.load("map1.tmx");
@@ -220,7 +223,7 @@ fn teleport(
     q_teleporters: Query<(Entity, &mut Transform, &Teleporter), Without<Player>>,
     mut q_player: Query<(Entity, &mut Transform, &mut Player)>,
     mut events: EventReader<CollisionEvent>,
-    mut q_epoch_sprites: Query<(&EpochSprite, &mut TileTextureIndex)>,
+    mut epoch: Query<&mut Epoch>,
 ) {
     let Ok((player_entity, mut player_transform, mut player)) = q_player.get_single_mut() else {
         return;
@@ -303,17 +306,13 @@ fn teleport(
 
     // Change epoch
     if tp_dir != 0 {
-        debug!("Age all epoch sprites: {tp_dir}");
-        for (epoch_sprite, mut tile_tex_id) in &mut q_epoch_sprites {
-            if tp_dir > 0 {
-                if tile_tex_id.0 < epoch_sprite.last as u32 {
-                    tile_tex_id.0 += 1;
-                }
-            } else {
-                if tile_tex_id.0 > epoch_sprite.first as u32 {
-                    tile_tex_id.0 -= 1;
-                }
-            }
+        let mut epoch = epoch.single_mut();
+        if tp_dir < 0 && epoch.0 > 0 {
+            debug!("Epoch {} -> {}", epoch.0, epoch.0 - 1);
+            epoch.0 -= 1;
+        } else if tp_dir > 0 && epoch.0 < 2 {
+            debug!("Epoch {} -> {}", epoch.0, epoch.0 + 1);
+            epoch.0 += 1;
         }
     }
 }
@@ -349,4 +348,20 @@ fn main_ui(mut q_canvas: Query<&mut Canvas>) {
 
     let brush = ctx.solid_brush(Color::WHITE);
     ctx.fill(Rect::new(0., 0., 160., 120.), &brush);
+}
+
+fn apply_epoch(
+    epoch: Query<&Epoch, Changed<Epoch>>,
+    mut q_epoch_sprites: Query<(&EpochSprite, &mut TileTextureIndex)>,
+) {
+    let Ok(epoch) = epoch.get_single() else {
+        return;
+    };
+
+    for (epoch_sprite, mut tile_tex_id) in &mut q_epoch_sprites {
+        let new_id = (epoch_sprite.first as i32 + epoch.0).max(0) as u32;
+        if new_id != tile_tex_id.0 {
+            tile_tex_id.0 = new_id;
+        }
+    }
 }
