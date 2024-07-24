@@ -1,13 +1,10 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
 use bevy::{
-    asset::AssetMetaCheck, log::LogPlugin, prelude::*, render::camera::ScalingMode,
-    window::WindowResolution,
+    asset::AssetMetaCheck, input::common_conditions::input_toggle_active, log::LogPlugin,
+    prelude::*, render::camera::ScalingMode, window::WindowResolution,
 };
-use bevy_ecs_tilemap::{
-    map::TilemapId,
-    tiles::{TileTextureIndex, TileVisible},
-};
+use bevy_ecs_tilemap::tiles::{TileTextureIndex, TileVisible};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_keith::{Canvas, KeithPlugin};
 use bevy_kira_audio::prelude::*;
@@ -51,13 +48,16 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugins(WorldInspectorPlugin::default())
+        .add_plugins(
+            WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
+        )
         .add_plugins(bevy_ecs_tilemap::TilemapPlugin)
         .add_plugins(tiled::TiledMapPlugin)
         .add_plugins(AudioPlugin)
         .add_plugins(KeithPlugin)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(16.0))
         .add_plugins(RapierDebugRenderPlugin {
+            enabled: false,
             mode: DebugRenderMode::default()
                 | DebugRenderMode::CONTACTS
                 | DebugRenderMode::SOLVER_CONTACTS,
@@ -66,15 +66,25 @@ fn main() {
         .register_type::<Player>()
         .insert_resource(ClearColor(Color::BLACK))
         .add_systems(Startup, setup)
+        .add_systems(First, toggle_debug)
+        .add_systems(PreUpdate, player_input)
         .add_systems(Update, post_load_setup)
         .add_systems(Update, close_on_esc)
         .add_systems(Update, animate_sprites)
-        .add_systems(Update, player_input)
         .add_systems(Update, teleport)
         .add_systems(Update, main_ui)
         .add_systems(PostUpdate, update_camera)
         .add_systems(PostUpdate, apply_epoch)
         .run();
+}
+
+pub fn toggle_debug(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut debug_ctx: ResMut<DebugRenderContext>,
+) {
+    if keyboard.just_pressed(KeyCode::F1) {
+        debug_ctx.enabled = !debug_ctx.enabled;
+    }
 }
 
 pub fn close_on_esc(mut ev_app_exit: EventWriter<AppExit>, input: Res<ButtonInput<KeyCode>>) {
