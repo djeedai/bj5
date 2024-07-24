@@ -350,6 +350,10 @@ fn main_ui(mut q_canvas: Query<&mut Canvas>) {
     canvas.clear();
 
     let mut ctx = canvas.render_context();
+
+    let brush = ctx.solid_brush(Color::srgba(0., 0., 0., 0.7));
+    ctx.fill(Rect::new(-480., -370., -380., -325.), &brush);
+
     let txt = ctx
         .new_layout("Time: 017")
         .font_size(16.)
@@ -358,9 +362,6 @@ fn main_ui(mut q_canvas: Query<&mut Canvas>) {
         .bounds(Vec2::new(100., 20.))
         .build();
     ctx.draw_text(txt, Vec2::new(-430., -340.));
-
-    let brush = ctx.solid_brush(Color::WHITE);
-    ctx.fill(Rect::new(0., 0., 160., 120.), &brush);
 }
 
 fn apply_epoch(
