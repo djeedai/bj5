@@ -6,7 +6,7 @@ use bevy::{
 };
 use bevy_ecs_tilemap::tiles::{TileTextureIndex, TileVisible};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_keith::{Canvas, KeithPlugin};
+use bevy_keith::{Canvas, KeithPlugin, ShapeExt};
 use bevy_kira_audio::prelude::*;
 use bevy_rapier2d::{prelude::*, rapier::geometry::CollisionEventFlags};
 
@@ -72,6 +72,7 @@ fn main() {
         .add_systems(Update, close_on_esc)
         .add_systems(Update, animate_sprites)
         .add_systems(Update, teleport)
+        .add_systems(Update, damage_player)
         .add_systems(Update, main_ui)
         .add_systems(PostUpdate, update_camera)
         .add_systems(PostUpdate, apply_epoch)
@@ -188,6 +189,7 @@ fn post_load_setup(
         Collider::ball(7.5),
         Name::new("Player"),
         Player::default(),
+        PlayerLife::default(),
     ));
 }
 
@@ -330,6 +332,39 @@ fn teleport(
     }
 }
 
+fn damage_player(
+    mut q_player: Query<(Entity, &mut PlayerLife)>,
+    q_damage: Query<&Damage, Without<PlayerLife>>,
+    mut events: EventReader<CollisionEvent>,
+) {
+    let Ok((player_entity, mut player_life)) = q_player.get_single_mut() else {
+        return;
+    };
+
+    for ev in events.read() {
+        let CollisionEvent::Started(e1, e2, flags) = ev else {
+            continue;
+        };
+
+        // trace!("Started: e1={:?} e2={:?} flags={:?}", e1, e2, flags);
+
+        // Detect when player starts overlapping a teleporter
+        if flags.contains(CollisionEventFlags::SENSOR) {
+            let mut e1 = *e1;
+            let mut e2 = *e2;
+            // Swap entities such that player is always #1 and TP is always #2
+            if e2 == player_entity {
+                std::mem::swap(&mut e1, &mut e2);
+            }
+            if e1 == player_entity {
+                if let Ok(dmg) = q_damage.get(e2) {
+                    player_life.damage(dmg.0);
+                }
+            }
+        }
+    }
+}
+
 fn update_camera(
     player: Query<&Transform, (With<Player>, Without<MainCamera>)>,
     mut camera: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
@@ -345,7 +380,7 @@ fn update_camera(
     camera.translation = player.translation;
 }
 
-fn main_ui(mut q_canvas: Query<&mut Canvas>) {
+fn main_ui(mut q_canvas: Query<&mut Canvas>, q_player: Query<&PlayerLife>) {
     let mut canvas = q_canvas.single_mut();
     canvas.clear();
 
@@ -362,6 +397,19 @@ fn main_ui(mut q_canvas: Query<&mut Canvas>) {
         .bounds(Vec2::new(100., 20.))
         .build();
     ctx.draw_text(txt, Vec2::new(-430., -340.));
+
+    if let Ok(player_life) = q_player.get_single() {
+        let r = Rect::new(-470., -300., -320., -320.);
+
+        let brush = ctx.solid_brush(Color::BLACK);
+        let border_brush = ctx.solid_brush(Color::WHITE);
+        ctx.fill(r, &brush).border(&border_brush, 2.);
+
+        let brush = ctx.solid_brush(Color::srgb(1., 0., 0.));
+        let mut r = r.inflate(-3.);
+        r.max.x = r.min.x + (r.width() / player_life.max_life * player_life.life);
+        ctx.fill(r, &brush);
+    }
 }
 
 fn apply_epoch(

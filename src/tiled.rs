@@ -34,9 +34,8 @@ use bevy::{
 use bevy_ecs_tilemap::prelude::*;
 use bevy_rapier2d::prelude::*;
 use thiserror::Error;
-use tiled::Tile;
 
-use crate::{EpochSprite, PlayerStart, Teleporter};
+use crate::{Damage, EpochSprite, PlayerStart, Teleporter};
 
 #[derive(Default, Component)]
 pub struct TileCollision;
@@ -215,11 +214,21 @@ fn get_teleporter_dst(obj: &tiled::Object) -> Option<u32> {
     Some(*other_id)
 }
 
-fn get_int_prop(tile: &Tile, name: &str) -> Option<i32> {
+fn get_int_prop(tile: &tiled::Tile, name: &str) -> Option<i32> {
     let Some(prop) = tile.properties.get(name) else {
         return None;
     };
     let tiled::PropertyValue::IntValue(value) = prop else {
+        return None;
+    };
+    Some(*value)
+}
+
+fn get_float_prop(tile: &tiled::Tile, name: &str) -> Option<f32> {
+    let Some(prop) = tile.properties.get(name) else {
+        return None;
+    };
+    let tiled::PropertyValue::FloatValue(value) = prop else {
         return None;
     };
     Some(*value)
@@ -363,7 +372,7 @@ pub fn process_loaded_maps(
                     let mut tile_storage = TileStorage::empty(map_size);
                     let layer_entity = commands.spawn_empty().id();
 
-                    let collision = layer.name == "Walls";
+                    let is_wall = layer.name == "Walls";
                     let layer_transform =
                                     // get_tilemap_center_transform(
                                     //     &map_size,
@@ -399,6 +408,7 @@ pub fn process_loaded_maps(
                             let Some(tile) = tileset.get_tile(tile_id) else {
                                 continue;
                             };
+
                             let epoch = get_int_prop(&tile, "epoch");
                             let epoch_min = get_int_prop(&tile, "epoch_min");
                             let epoch_max = get_int_prop(&tile, "epoch_max");
@@ -437,6 +447,7 @@ pub fn process_loaded_maps(
                             };
 
                             let tile_pos = TilePos { x, y };
+
                             let mut ent_cmds = commands.spawn(TileBundle {
                                 position: tile_pos,
                                 tilemap_id: TilemapId(layer_entity),
@@ -456,7 +467,46 @@ pub fn process_loaded_maps(
                             let tile_entity = ent_cmds.id();
                             tile_storage.set(&tile_pos, tile_entity);
 
-                            if collision {
+                            // Damage-inducing tile
+                            if let Some(damage) = get_float_prop(&tile, "damage") {
+                                if let Some(obj_data) = &tile.collision {
+                                    for data in obj_data.object_data() {
+                                        if data.user_type == "collider" {
+                                            if let tiled::ObjectShape::Rect { width, height } =
+                                                data.shape
+                                            {
+                                                let tile_pos: Vec2 = tile_pos.into();
+                                                let grid_size: Vec2 = grid_size.into();
+                                                let tile_pos2: Vec2 = tile_pos * grid_size
+                                                    + Vec2::new(
+                                                        layer_transform.translation.x,
+                                                        layer_transform.translation.y,
+                                                    );
+
+                                                commands.spawn((
+                                                    TileCollision,
+                                                    Transform::from_xyz(
+                                                        tile_pos2.x + data.x,
+                                                        tile_pos2.y + grid_size.y / 2.
+                                                            - data.y
+                                                            - height / 2.,
+                                                        0.,
+                                                    ),
+                                                    GlobalTransform::default(),
+                                                    RigidBody::Fixed,
+                                                    Sensor,
+                                                    Collider::cuboid(width / 2., height / 2.),
+                                                    Damage(damage),
+                                                    Name::new(format!("dmg{}x{}", x, y)),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Static world collider tile
+                            if is_wall {
                                 let tile_pos: Vec2 = tile_pos.into();
                                 let grid_size: Vec2 = grid_size.into();
                                 let tile_pos2: Vec2 = tile_pos * grid_size

@@ -33,6 +33,7 @@ pub struct Player {
     /// Side from which the player entered the last teleporter, to determine if
     /// it exited on the opposite side and therefore if teleportation is needed.
     pub teleporter_side: f32,
+    pub life: f32,
 }
 
 impl Default for Player {
@@ -40,7 +41,29 @@ impl Default for Player {
         Self {
             impulse_factor: 500.,
             teleporter_side: 0.,
+            life: 20.,
         }
+    }
+}
+
+#[derive(Component)]
+pub struct PlayerLife {
+    pub life: f32,
+    pub max_life: f32,
+}
+
+impl Default for PlayerLife {
+    fn default() -> Self {
+        Self {
+            life: 20.,
+            max_life: 20.,
+        }
+    }
+}
+
+impl PlayerLife {
+    pub fn damage(&mut self, amount: f32) {
+        self.life = (self.life - amount).max(0.);
     }
 }
 
@@ -66,3 +89,6 @@ pub struct EpochSprite {
     /// Last epoch the sprite is available at.
     pub last: i32,
 }
+
+#[derive(Component)]
+pub struct Damage(pub f32);

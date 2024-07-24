@@ -30,6 +30,14 @@
     <property name="epoch_min" type="int" value="0"/>
    </properties>
   </tile>
+  <tile id="176">
+   <properties>
+    <property name="damage" type="float" value="5"/>
+   </properties>
+   <objectgroup draworder="index" id="2">
+    <object id="1" type="collider" x="0" y="13" width="16" height="3"/>
+   </objectgroup>
+  </tile>
   <tile id="248">
    <objectgroup draworder="index" id="2">
     <object id="3" x="0" y="0" width="16" height="16"/>
@@ -53,7 +61,7 @@
  </layer>
  <layer id="2" name="Interactables" width="200" height="150">
   <data encoding="base64" compression="zlib">
-   eJzt07EJADEQA0H334U7/dywoXlzzFSgQLsWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAzLf/HgAP0wc0fTDBrR/rgwn0AU0f0PQBTR/Q9AFNH9D0AU0f0PQBTR/Q9AFNHwDA6QPQ+RI+
+   eJzt08ENgDAMBMH03wUl0GEqWH4I5MwUYPlxuxYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADMd339APyYPqDpgwne2rE+mEAf0PQBTR/Q9AFNH9D0AU0f0PQBTR/Q9AFNH9D0wYludwEebcz/FFE=
   </data>
  </layer>
  <objectgroup id="3" name="Objects">
