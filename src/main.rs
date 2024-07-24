@@ -4,7 +4,10 @@ use bevy::{
     asset::AssetMetaCheck, log::LogPlugin, prelude::*, render::camera::ScalingMode,
     window::WindowResolution,
 };
-use bevy_ecs_tilemap::{map::TilemapId, tiles::TileTextureIndex};
+use bevy_ecs_tilemap::{
+    map::TilemapId,
+    tiles::{TileTextureIndex, TileVisible},
+};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_keith::{Canvas, KeithPlugin};
 use bevy_kira_audio::prelude::*;
@@ -352,16 +355,27 @@ fn main_ui(mut q_canvas: Query<&mut Canvas>) {
 
 fn apply_epoch(
     epoch: Query<&Epoch, Changed<Epoch>>,
-    mut q_epoch_sprites: Query<(&EpochSprite, &mut TileTextureIndex)>,
+    mut q_epoch_sprites: Query<(&EpochSprite, &mut TileTextureIndex, &mut TileVisible)>,
 ) {
     let Ok(epoch) = epoch.get_single() else {
         return;
     };
 
-    for (epoch_sprite, mut tile_tex_id) in &mut q_epoch_sprites {
-        let new_id = (epoch_sprite.first as i32 + epoch.0).max(0) as u32;
-        if new_id != tile_tex_id.0 {
-            tile_tex_id.0 = new_id;
+    for (epoch_sprite, mut tile_tex_id, mut tile_visible) in &mut q_epoch_sprites {
+        let epoch = epoch.0;
+        if epoch >= epoch_sprite.first && epoch <= epoch_sprite.last {
+            if !tile_visible.0 {
+                tile_visible.0 = true;
+            }
+
+            let new_id = epoch_sprite.base as u32 + (epoch - epoch_sprite.first) as u32;
+            if new_id != tile_tex_id.0 {
+                tile_tex_id.0 = new_id;
+            }
+        } else {
+            if tile_visible.0 {
+                tile_visible.0 = false;
+            }
         }
     }
 }

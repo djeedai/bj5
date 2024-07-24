@@ -58,6 +58,10 @@ pub struct Epoch(pub i32);
 
 #[derive(Default, Component)]
 pub struct EpochSprite {
-    pub first: usize,
-    pub last: usize,
+    /// Base tile index to add to `first` and `last` to convert an epoch into a tile ID.
+    pub base: usize,
+    /// First epoch the sprite is available at.
+    pub first: i32,
+    /// Last epoch the sprite is available at.
+    pub last: i32,
 }

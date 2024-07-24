@@ -215,14 +215,14 @@ fn get_teleporter_dst(obj: &tiled::Object) -> Option<u32> {
     Some(*other_id)
 }
 
-fn get_epoch_prop(tile: &Tile) -> Option<i32> {
-    let Some(epoch) = tile.properties.get("epoch") else {
+fn get_int_prop(tile: &Tile, name: &str) -> Option<i32> {
+    let Some(prop) = tile.properties.get(name) else {
         return None;
     };
-    let tiled::PropertyValue::IntValue(epoch_id) = epoch else {
+    let tiled::PropertyValue::IntValue(value) = prop else {
         return None;
     };
-    Some(*epoch_id)
+    Some(*value)
 }
 
 pub fn process_loaded_maps(
@@ -399,7 +399,9 @@ pub fn process_loaded_maps(
                             let Some(tile) = tileset.get_tile(tile_id) else {
                                 continue;
                             };
-                            let epoch = get_epoch_prop(&tile);
+                            let epoch = get_int_prop(&tile, "epoch");
+                            let epoch_min = get_int_prop(&tile, "epoch_min");
+                            let epoch_max = get_int_prop(&tile, "epoch_max");
 
                             let texture_index = match tilemap_texture {
                                             TilemapTexture::Single(_) => layer_tile.id(),
@@ -411,6 +413,29 @@ pub fn process_loaded_maps(
                                             _ => unreachable!()
                                         };
 
+                            let (epoch_sprite, is_visible) = if let Some(epoch_id) = epoch {
+                                let min0 = epoch_min.unwrap_or(epoch_id);
+                                let max0 = epoch_max.unwrap_or(epoch_id);
+                                let min = min0.min(max0);
+                                let max = max0.max(min0);
+                                let epoch_id = epoch_id.clamp(min, max);
+                                let epoch_sprite = EpochSprite {
+                                    base: tile_id as usize - (epoch_id - min) as usize,
+                                    first: min,
+                                    last: max,
+                                };
+                                trace!(
+                                    "EpochSprite: min={} max={} epoch={} base={}",
+                                    min,
+                                    max,
+                                    epoch_id,
+                                    epoch_sprite.base
+                                );
+                                (Some(epoch_sprite), epoch_id == 0)
+                            } else {
+                                (None, true)
+                            };
+
                             let tile_pos = TilePos { x, y };
                             let mut ent_cmds = commands.spawn(TileBundle {
                                 position: tile_pos,
@@ -421,15 +446,13 @@ pub fn process_loaded_maps(
                                     y: layer_tile_data.flip_v,
                                     d: layer_tile_data.flip_d,
                                 },
+                                visible: TileVisible(is_visible),
                                 ..Default::default()
                             });
-                            if let Some(_epoch_id) = epoch {
-                                // FIXME: unused
-                                ent_cmds.insert(EpochSprite {
-                                    first: tile_id as usize,
-                                    last: tile_id as usize + 2, // FIXME: hard-coded
-                                });
+                            if let Some(epoch_sprite) = epoch_sprite {
+                                ent_cmds.insert(epoch_sprite);
                             }
+
                             let tile_entity = ent_cmds.id();
                             tile_storage.set(&tile_pos, tile_entity);
 
