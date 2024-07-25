@@ -1,5 +1,7 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
+use std::time::Duration;
+
 use bevy::{
     asset::AssetMetaCheck, input::common_conditions::input_toggle_active, log::LogPlugin,
     prelude::*, render::camera::ScalingMode, window::WindowResolution,
@@ -71,6 +73,7 @@ fn main() {
         .add_systems(Update, post_load_setup)
         .add_systems(Update, close_on_esc)
         .add_systems(Update, animate_sprites)
+        .add_systems(Update, animate_tiles)
         .add_systems(Update, teleport)
         .add_systems(Update, damage_player)
         .add_systems(Update, main_ui)
@@ -94,7 +97,7 @@ pub fn close_on_esc(mut ev_app_exit: EventWriter<AppExit>, input: Res<ButtonInpu
     }
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>, _audio: Res<Audio>) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>, audio: Res<Audio>) {
     commands.spawn((
         Camera2dBundle {
             projection: OrthographicProjection {
@@ -144,7 +147,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, _audio: Res<Aud
     ));
 
     // Start background audio
-    // audio.play(asset_server.load("background_audio.ogg")).looped();
+    audio.play(asset_server.load("bgm1.ogg")).looped();
 }
 
 fn post_load_setup(
@@ -180,8 +183,7 @@ fn post_load_setup(
             layout: player_atlas_layout,
             index: 0,
         },
-        AnimationIndices { first: 0, last: 3 },
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
+        TileAnimation::uniform(0, 2, 100),
         RigidBody::Dynamic,
         Ccd::enabled(),
         ExternalImpulse::default(),
@@ -193,18 +195,20 @@ fn post_load_setup(
     ));
 }
 
-fn animate_sprites(
-    time: Res<Time>,
-    mut query: Query<(&AnimationIndices, &mut AnimationTimer, &mut TextureAtlas)>,
-) {
-    for (indices, mut timer, mut atlas) in &mut query {
-        timer.tick(time.delta());
-        if timer.just_finished() {
-            atlas.index = if atlas.index == indices.last {
-                indices.first
-            } else {
-                atlas.index + 1
-            };
+fn animate_sprites(time: Res<Time>, mut query: Query<(&mut TileAnimation, &mut TextureAtlas)>) {
+    for (mut anim, mut atlas) in &mut query {
+        let idx = anim.tick(time.delta().as_millis() as u32) as usize;
+        if idx != atlas.index {
+            atlas.index = idx;
+        }
+    }
+}
+
+fn animate_tiles(time: Res<Time>, mut query: Query<(&mut TileAnimation, &mut TileTextureIndex)>) {
+    for (mut anim, mut tex_index) in &mut query {
+        let idx = anim.tick(time.delta().as_millis() as u32);
+        if idx != tex_index.0 {
+            tex_index.0 = idx;
         }
     }
 }

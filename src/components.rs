@@ -1,3 +1,5 @@
+use std::{ops::AddAssign, time::Duration};
+
 use bevy::prelude::*;
 
 #[derive(Default, Component)]
@@ -67,14 +69,43 @@ impl PlayerLife {
     }
 }
 
-#[derive(Component)]
-pub struct AnimationIndices {
-    pub first: usize,
-    pub last: usize,
+#[derive(Default, Component)]
+pub struct TileAnimation {
+    pub frames: Vec<tiled::Frame>,
+    pub index: u32,
+    pub clock: u32,
 }
 
-#[derive(Component, Deref, DerefMut)]
-pub struct AnimationTimer(pub Timer);
+impl TileAnimation {
+    pub fn uniform(start: u32, count: u32, duration: u32) -> Self {
+        Self {
+            frames: (start..start + count)
+                .map(|idx| tiled::Frame {
+                    tile_id: idx,
+                    duration,
+                })
+                .collect(),
+            ..default()
+        }
+    }
+
+    pub fn tick(&mut self, dt: u32) -> tiled::TileId {
+        self.clock += dt;
+        let mut dur = self.frames[self.index as usize].duration;
+        if self.clock > dur {
+            self.clock -= dur;
+            let len = self.frames.len() as u32;
+            self.index = (self.index + 1) % len;
+            dur = self.frames[self.index as usize].duration;
+            while self.clock > dur {
+                self.clock -= dur;
+                self.index = (self.index + 1) % len;
+                dur = self.frames[self.index as usize].duration;
+            }
+        }
+        self.frames[self.index as usize].tile_id
+    }
+}
 
 #[derive(Default, Component)]
 pub struct Epoch(pub i32);

@@ -35,7 +35,7 @@ use bevy_ecs_tilemap::prelude::*;
 use bevy_rapier2d::prelude::*;
 use thiserror::Error;
 
-use crate::{Damage, EpochSprite, PlayerStart, Teleporter};
+use crate::{Damage, EpochSprite, PlayerStart, Teleporter, TileAnimation};
 
 #[derive(Default, Component)]
 pub struct TileCollision;
@@ -446,6 +446,13 @@ pub fn process_loaded_maps(
                                 (None, true)
                             };
 
+                            // Tile animation
+                            let tile_anim = tile.animation.as_ref().map(|frames| TileAnimation {
+                                frames: frames.clone(),
+                                index: rand::random::<u32>() % frames.len() as u32,
+                                clock: rand::random::<u32>() % 1000,
+                            });
+
                             let tile_pos = TilePos { x, y };
 
                             let mut ent_cmds = commands.spawn(TileBundle {
@@ -462,6 +469,15 @@ pub fn process_loaded_maps(
                             });
                             if let Some(epoch_sprite) = epoch_sprite {
                                 ent_cmds.insert(epoch_sprite);
+                            }
+                            if let Some(tile_anim) = tile_anim {
+                                debug!(
+                                    "Tile anim #{}: {}#{}, ...",
+                                    tile_anim.frames.len(),
+                                    tile_anim.frames[0].tile_id,
+                                    tile_anim.frames[0].duration
+                                );
+                                ent_cmds.insert(tile_anim);
                             }
 
                             let tile_entity = ent_cmds.id();

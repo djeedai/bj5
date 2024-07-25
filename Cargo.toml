@@ -28,3 +28,4 @@ bevy_kira_audio = "0.20"
 bevy_rapier2d = { version = "0.27", features = [ "simd-stable", "debug-render-2d" ] }
 thiserror = "1"
 bevy-inspector-egui = "0.25"
+rand = "0.8"
