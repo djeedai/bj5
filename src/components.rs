@@ -108,13 +108,19 @@ impl TileAnimation {
 }
 
 #[derive(Default, Component)]
-pub struct Epoch(pub i32);
+pub struct Epoch {
+    pub min: i32,
+    pub max: i32,
+    pub cur: i32,
+}
 
 #[derive(Default, Component)]
 pub struct EpochSprite {
     /// Base tile index to add to `first` and `last` to convert an epoch into a
     /// tile ID.
     pub base: usize,
+    /// Initial epoch delta at start.
+    pub delta: i32,
     /// First epoch the sprite is available at.
     pub first: i32,
     /// Last epoch the sprite is available at.

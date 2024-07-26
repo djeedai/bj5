@@ -35,7 +35,7 @@ use bevy_ecs_tilemap::prelude::*;
 use bevy_rapier2d::prelude::*;
 use thiserror::Error;
 
-use crate::{Damage, EpochSprite, PlayerStart, Teleporter, TileAnimation};
+use crate::{Damage, Epoch, EpochSprite, PlayerStart, Teleporter, TileAnimation};
 
 #[derive(Default, Component)]
 pub struct TileCollision;
@@ -245,6 +245,7 @@ pub fn process_loaded_maps(
         &TilemapRenderSettings,
     )>,
     new_maps: Query<&Handle<TiledMap>, Added<Handle<TiledMap>>>,
+    mut q_epoch: Query<&mut Epoch>,
 ) {
     let mut changed_maps = Vec::<AssetId<TiledMap>>::default();
     for event in map_events.read() {
@@ -271,6 +272,10 @@ pub fn process_loaded_maps(
     for new_map_handle in new_maps.iter() {
         changed_maps.push(new_map_handle.id());
     }
+
+    let mut epoch = q_epoch.single_mut();
+    let mut min_epoch = epoch.min;
+    let mut max_epoch = epoch.max;
 
     for changed_map in changed_maps.iter() {
         for (map_handle, mut layer_storage, render_settings) in map_query.iter_mut() {
@@ -380,7 +385,7 @@ pub fn process_loaded_maps(
                                     //     &map_type,
                                     //     layer_index as f32,
                                     // ) * 
-                                    Transform::from_xyz(offset_x, -offset_y, 0.0);
+                                    Transform::from_xyz(offset_x, -offset_y, layer_index as f32);
 
                     for x in 0..map_size.x {
                         for y in 0..map_size.y {
@@ -428,20 +433,25 @@ pub fn process_loaded_maps(
                                 let max0 = epoch_max.unwrap_or(epoch_id);
                                 let min = min0.min(max0);
                                 let max = max0.max(min0);
+
+                                min_epoch = min_epoch.min(min - epoch_id);
+                                max_epoch = max_epoch.max(max - epoch_id);
+
                                 let epoch_id = epoch_id.clamp(min, max);
                                 let epoch_sprite = EpochSprite {
                                     base: tile_id as usize - (epoch_id - min) as usize,
+                                    delta: epoch_id,
                                     first: min,
                                     last: max,
                                 };
                                 trace!(
-                                    "EpochSprite: min={} max={} epoch={} base={}",
+                                    "EpochSprite: min={} max={} delta=epoch={} base={}",
                                     min,
                                     max,
                                     epoch_id,
                                     epoch_sprite.base
                                 );
-                                (Some(epoch_sprite), epoch_id == 0)
+                                (Some(epoch_sprite), true)
                             } else {
                                 (None, true)
                             };
@@ -640,4 +650,7 @@ pub fn process_loaded_maps(
             }
         }
     }
+
+    epoch.min = min_epoch;
+    epoch.max = max_epoch;
 }

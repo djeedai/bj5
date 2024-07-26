@@ -175,7 +175,7 @@ fn post_load_setup(
     let player_atlas_layout = texture_atlas_layouts.add(player_layout);
     commands.spawn((
         SpriteBundle {
-            transform: Transform::from_xyz(player_start.position.x, player_start.position.y, 10.),
+            transform: Transform::from_xyz(player_start.position.x, player_start.position.y, 4.),
             texture: player_sheet,
             ..default()
         },
@@ -326,12 +326,12 @@ fn teleport(
     // Change epoch
     if tp_dir != 0 {
         let mut epoch = epoch.single_mut();
-        if tp_dir < 0 && epoch.0 > 0 {
-            debug!("Epoch {} -> {}", epoch.0, epoch.0 - 1);
-            epoch.0 -= 1;
-        } else if tp_dir > 0 && epoch.0 < 2 {
-            debug!("Epoch {} -> {}", epoch.0, epoch.0 + 1);
-            epoch.0 += 1;
+        if tp_dir < 0 && epoch.cur > epoch.min {
+            debug!("Epoch {} -> {}", epoch.cur, epoch.cur - 1);
+            epoch.cur -= 1;
+        } else if tp_dir > 0 && epoch.cur < epoch.max {
+            debug!("Epoch {} -> {}", epoch.cur, epoch.cur + 1);
+            epoch.cur += 1;
         }
     }
 }
@@ -425,18 +425,35 @@ fn apply_epoch(
     };
 
     for (epoch_sprite, mut tile_tex_id, mut tile_visible) in &mut q_epoch_sprites {
-        let epoch = epoch.0;
-        if epoch >= epoch_sprite.first && epoch <= epoch_sprite.last {
+        let tile_epoch = epoch.cur + epoch_sprite.delta;
+        if tile_epoch >= epoch_sprite.first && tile_epoch <= epoch_sprite.last {
             if !tile_visible.0 {
                 tile_visible.0 = true;
             }
 
-            let new_id = epoch_sprite.base as u32 + (epoch - epoch_sprite.first) as u32;
+            let new_id = epoch_sprite.base as u32 + (tile_epoch - epoch_sprite.first) as u32;
             if new_id != tile_tex_id.0 {
+                trace!(
+                    "Sprite #{}: epoch={} tile_epoch={} in [{},{}] => visible=true, new_id={}",
+                    tile_tex_id.0,
+                    epoch.cur,
+                    tile_epoch,
+                    epoch_sprite.first,
+                    epoch_sprite.last,
+                    new_id
+                );
                 tile_tex_id.0 = new_id;
             }
         } else {
             if tile_visible.0 {
+                trace!(
+                    "Sprite #{}: epoch={} tile_epoch={} out of [{},{}] => visible=false",
+                    tile_tex_id.0,
+                    epoch.cur,
+                    tile_epoch,
+                    epoch_sprite.first,
+                    epoch_sprite.last
+                );
                 tile_visible.0 = false;
             }
         }
