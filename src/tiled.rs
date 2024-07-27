@@ -35,7 +35,7 @@ use bevy_ecs_tilemap::prelude::*;
 use bevy_rapier2d::prelude::*;
 use thiserror::Error;
 
-use crate::{Damage, Epoch, EpochSprite, PlayerStart, Teleporter, TileAnimation};
+use crate::{Damage, Epoch, EpochSprite, Ladder, PlayerStart, Teleporter, TileAnimation};
 
 #[derive(Default, Component)]
 pub struct TileCollision;
@@ -626,6 +626,19 @@ pub fn process_loaded_maps(
                             dst_id,
                         );
                         tp_map.insert(obj.id(), (entity, dst_id));
+                    } else if obj.user_type == "ladder" {
+                        let tiled::ObjectShape::Rect { width, height } = &obj.shape else {
+                            continue;
+                        };
+
+                        let offset = Vec3::new(width / 2., -height / 2., 0.);
+                        commands.spawn((
+                            TransformBundle::from(Transform::from_translation(position + offset)),
+                            Collider::cuboid(width / 2., height / 2.),
+                            Sensor,
+                            Ladder,
+                            Name::new(obj.name.clone()),
+                        ));
                     } else {
                         debug!(
                             "Ignoring unknown object '{}' of class '{}'",
@@ -635,7 +648,8 @@ pub fn process_loaded_maps(
                 }
             }
 
-            // Resolve teleporters
+            // Resolve teleporters once all entities are created, and insert the Teleporter
+            // component with a link to the destination entity.
             for (id, (entity, dst_id)) in &tp_map {
                 if let Some((dst_entity, src_id)) = tp_map.get(dst_id) {
                     assert_eq!(*src_id, *id);

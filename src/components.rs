@@ -48,6 +48,12 @@ impl Default for Player {
     }
 }
 
+#[derive(Default, Component)]
+pub struct PlayerController {
+    pub is_grounded: bool,
+    pub is_climbing: bool,
+}
+
 #[derive(Component)]
 pub struct PlayerLife {
     pub life: f32,
@@ -129,3 +135,6 @@ pub struct EpochSprite {
 
 #[derive(Component)]
 pub struct Damage(pub f32);
+
+#[derive(Default, Component)]
+pub struct Ladder;

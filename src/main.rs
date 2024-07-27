@@ -189,8 +189,11 @@ fn post_load_setup(
         ExternalImpulse::default(),
         ActiveEvents::COLLISION_EVENTS,
         Collider::ball(7.5),
+        Velocity::zero(),
+        GravityScale(1.),
         Name::new("Player"),
         Player::default(),
+        PlayerController::default(),
         PlayerLife::default(),
     ));
 }
@@ -215,20 +218,72 @@ fn animate_tiles(time: Res<Time>, mut query: Query<(&mut TileAnimation, &mut Til
 
 fn player_input(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut player: Query<(Entity, &Player, &mut ExternalImpulse)>,
+    mut player: Query<(
+        Entity,
+        &Player,
+        &mut PlayerController,
+        &mut Velocity,
+        &mut GravityScale,
+        &mut ExternalImpulse,
+    )>,
     physics: Res<RapierContext>,
+    q_ladders: Query<Entity, With<Ladder>>,
 ) {
-    let Ok((player_entity, player, mut impulse)) = player.get_single_mut() else {
+    let Ok((
+        player_entity,
+        player,
+        mut player_controller,
+        mut velocity,
+        mut gravity_scale,
+        mut impulse,
+    )) = player.get_single_mut()
+    else {
         return;
     };
 
     let mut is_grounded = false;
+
     for c in physics.contact_pairs_with(player_entity) {
         for m in c.manifolds() {
             if m.normal().y > 0.7 {
                 is_grounded = true;
                 break;
             }
+        }
+    }
+    if player_controller.is_grounded != is_grounded {
+        player_controller.is_grounded = is_grounded;
+    }
+
+    // If not already on a ladder, check if intersecting one
+    if !player_controller.is_climbing
+        && (keyboard.pressed(KeyCode::KeyW) || keyboard.pressed(KeyCode::KeyS))
+    {
+        for (e1, e2, _) in physics.intersection_pairs_with(player_entity) {
+            assert!(e1 == player_entity || e2 == player_entity);
+            let other_entity = if e1 == player_entity { e2 } else { e1 };
+            // Check if the other entity is a ladder
+            if q_ladders.contains(other_entity) {
+                player_controller.is_climbing = true;
+                gravity_scale.0 = 0.;
+                break;
+            }
+        }
+    } else if player_controller.is_climbing {
+        // Falling from ladder
+        let mut is_on_ladder = false;
+        for (e1, e2, _) in physics.intersection_pairs_with(player_entity) {
+            assert!(e1 == player_entity || e2 == player_entity);
+            let other_entity = if e1 == player_entity { e2 } else { e1 };
+            // Check if the other entity is a ladder
+            if q_ladders.contains(other_entity) {
+                is_on_ladder = true;
+                break;
+            }
+        }
+        if !is_on_ladder {
+            player_controller.is_climbing = false;
+            gravity_scale.0 = 1.;
         }
     }
 
@@ -239,9 +294,40 @@ fn player_input(
     if keyboard.pressed(KeyCode::KeyD) {
         dv.x += 1.;
     }
-    if is_grounded && keyboard.just_pressed(KeyCode::Space) {
+    if (is_grounded || player_controller.is_climbing) && keyboard.just_pressed(KeyCode::Space) {
         dv.y += 30.;
+        if player_controller.is_climbing {
+            player_controller.is_climbing = false;
+            gravity_scale.0 = 1.;
+        }
     }
+
+    if player_controller.is_climbing {
+        let mut target_velocity = velocity.linvel;
+        let mut has_input = false;
+        if keyboard.pressed(KeyCode::KeyW) {
+            target_velocity.y += 2.;
+            has_input = true;
+        } else if keyboard.pressed(KeyCode::KeyS) {
+            target_velocity.y -= 2.;
+            has_input = true;
+        }
+        if keyboard.pressed(KeyCode::KeyA) {
+            target_velocity.x -= 1.;
+            has_input = true;
+        } else if keyboard.pressed(KeyCode::KeyD) {
+            target_velocity.x += 1.;
+            has_input = true;
+        }
+        if !has_input {
+            target_velocity = Vec2::ZERO;
+        }
+        let new_vel = target_velocity.clamp_length_max(50.);
+        if new_vel != velocity.linvel {
+            velocity.linvel = new_vel;
+        }
+    }
+
     // trace!("dv: {:?}", dv);
 
     if dv != Vec2::ZERO {
@@ -395,7 +481,11 @@ fn update_camera(
     camera.translation = player.translation;
 }
 
-fn main_ui(mut q_canvas: Query<&mut Canvas>, q_player: Query<&PlayerLife>) {
+fn main_ui(
+    mut q_canvas: Query<&mut Canvas>,
+    q_player: Query<&PlayerLife>,
+    q_temp: Query<&PlayerController>,
+) {
     let mut canvas = q_canvas.single_mut();
     canvas.clear();
 
@@ -404,14 +494,21 @@ fn main_ui(mut q_canvas: Query<&mut Canvas>, q_player: Query<&PlayerLife>) {
     let brush = ctx.solid_brush(Color::srgba(0., 0., 0., 0.7));
     ctx.fill(Rect::new(-480., -370., -380., -325.), &brush);
 
-    let txt = ctx
-        .new_layout("Time: 017")
-        .font_size(16.)
-        .color(Color::WHITE)
-        .alignment(JustifyText::Left)
-        .bounds(Vec2::new(100., 20.))
-        .build();
-    ctx.draw_text(txt, Vec2::new(-430., -340.));
+    // TEMP
+    if let Ok(pc) = q_temp.get_single() {
+        let txt = ctx
+            //.new_layout("Time: 017")
+            .new_layout(format!(
+                "grounded={} climbing={}",
+                pc.is_grounded, pc.is_climbing
+            ))
+            .font_size(16.)
+            .color(Color::WHITE)
+            .alignment(JustifyText::Left)
+            .bounds(Vec2::new(100., 20.))
+            .build();
+        ctx.draw_text(txt, Vec2::new(-430., -340.));
+    }
 
     if let Ok(player_life) = q_player.get_single() {
         let r = Rect::new(-470., -300., -320., -320.);
