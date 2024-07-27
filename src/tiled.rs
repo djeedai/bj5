@@ -276,6 +276,7 @@ pub fn process_loaded_maps(
     let mut epoch = q_epoch.single_mut();
     let mut min_epoch = epoch.min;
     let mut max_epoch = epoch.max;
+    let mut epoch_change = false;
 
     for changed_map in changed_maps.iter() {
         for (map_handle, mut layer_storage, render_settings) in map_query.iter_mut() {
@@ -436,6 +437,7 @@ pub fn process_loaded_maps(
 
                                 min_epoch = min_epoch.min(min - epoch_id);
                                 max_epoch = max_epoch.max(max - epoch_id);
+                                epoch_change = true;
 
                                 let epoch_id = epoch_id.clamp(min, max);
                                 let epoch_sprite = EpochSprite {
@@ -651,6 +653,9 @@ pub fn process_loaded_maps(
         }
     }
 
-    epoch.min = min_epoch;
-    epoch.max = max_epoch;
+    if epoch_change {
+        info!("Loaded map with epoch({}:{})", min_epoch, max_epoch);
+        epoch.min = min_epoch;
+        epoch.max = max_epoch;
+    }
 }

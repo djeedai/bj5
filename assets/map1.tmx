@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="200" height="150" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#000000" nextlayerid="7" nextobjectid="9">
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="200" height="150" tilewidth="16" tileheight="16" infinite="0" backgroundcolor="#000000" nextlayerid="7" nextobjectid="11">
  <tileset firstgid="1" name="tileset1" tilewidth="16" tileheight="16" tilecount="256" columns="16">
   <image source="tileset1.png" width="256" height="256"/>
   <tile id="15">
@@ -61,33 +61,33 @@
  </tileset>
  <layer id="4" name="Background" width="200" height="150">
   <data encoding="base64" compression="zlib">
-   eJzt2EsKwjAUBdAuoZOO3P8+HQmiSfpSDc3nHAiILRcH96WN2wYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwlscPC2ZXOw/mg5V4XkCe+YC86LuUGYFvni0QZz4gxnxA2XH3D4COmQ9m0KrHo+XCuyOxctdnzmUd0X7sW7pvpRXRKrdFJuspdaO2Y9HO9ZgLKa9+7Invon0q3dcq96i4L5ILOa3229FyIaW2V//ocY+5kFK730b35NFy4Yqz9/dVcuGl5n/XGq3ODM4itHDlrDvjgpS7e9nLgjOtejZaLqQcH59rulS6PlouQM4TR5oxyw==
+   eJzt1jsOgzAQBUAuQZX73zNVmgQT2/i3MCO5ciI9ad8C2wYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAx+vCgbsr3Qf7wZN4X0Ca/YC03G8pOwK/vFsgn/2APPYDzu2zA8DC7Aek2Q+eaj84qfvZImWljZmzPOrbvzNLpKy0M3qONT2b1blIWenjaJ495lvap9zfPj0r/V19TrY6T8/KmlrOrbYHrTp316zMM6pzOf+TlahyZp3bge+71t2JmJXYrj4Lc75nRu7HallZT8nMazpS0rPac5esrGdEJ5z63WEds/tR0pvZmXpkZW29O1PaibP7O2YltkjzjZh1BW+AeUIN
   </data>
  </layer>
  <layer id="1" name="Walls" width="200" height="150">
   <data encoding="base64" compression="zlib">
-   eJzt2cFOwkAQANAKBzHxohw8AweM8aL//3FuAxubdbctpIZueS+ZAy2d9DBDZoemAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC4zGOITYinW78IzNBbiNcQH82pTza3fR2YlWOI5+bUIzFSuWuwNKVZqu2R90wM9Q3UYjMiPpvfWWrMeSPOXnqEmqU1PCa6543S+TzXH7mAObumP/r6JfbK2P7QJ8zZFP3Rje0578sVz8LczKk/9Aj/5ZIa3Ic4nJ/bnT+n9/eZ67XkhdTYWjsUno91l97fVZZXf1BSmmnib2up1paWF3LS2WOqGqstL/Rp625snT2EWIVYLzAvRNfWS3fGWWXiXvKybNuB++3v7nfzt47iOfmr6d/XLiUv96lUF3EeifN9rK3u93M706F6qy0v9600b6S7oNJetFXaJ9WUV3+Qs8/EpbugWItDMee89l8AwFSm3m/Gc3KNeSGVnk/beinVXlqjcY+67twvnXtryAupdC/UtyPq+/9gVbheU15OfgDZQDF1
+   eJzt2U1r3DAQAFBnc8gWetnmkHOTQ0rJJf3/Py42WbXCSJbsrj9ivwdDILbFgGaEpG0aAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDbeWjj3Ma3tROBDXpq40cbv5vPPjmvmw5symsb35vPHgnRl/of7E1uL9X1yK9ElPoGvopzRbw1//ZSNeeNsPfSI+xBv5aHIj5v5M7n+oM9GdMfQ/0SekV/cCS1vfJ4ff+SeDZXXlO/WzpX9iFVI1vujylj6w+mGqr/50TEz1+uY/xMfHv0XJlffy5jt5rXXL29ZN7vcnpOPJcra4j3A3NIrcG5eiuRK0sLa+CcNfc/dRaTK2sJ83nrqK21uzZObdwfNFe2p2Z+lxLvR06JkCtLeyy/8netLEVtTXTj/Ul8F860783wXe9ec2V7aubxcv1b2huUxgr1EPb4ob7i7+I9+5Sa+8q5sj25/UF/XSvN9yXzTrxG9vf4ubvRMF6q7o6WK+uqPSvW1FwnVQNjzr3BmPP3nnNlm/pzXqqZXI3c4p60ZM+5AmzV2PucNfTveeTKUsbct0zV1UyuTvr1FO5S76PnU+6GjpAr86u9b6lZB3O/PQyNP/Qbwinz/6PluqQP5h40Mg==
   </data>
  </layer>
  <layer id="5" name="Decorations" width="200" height="150">
   <data encoding="base64" compression="zlib">
-   eJzt2bENgCAQQFFHcANvA/ffzthRKIEoxtP3KhLMr4AYmCYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/m7WhS6RrLsM6vJ9d5y3UYzXBN1yv6ynX0HdvnZCF4AD5f9F/LgLwDXZ7l3d5wI8Lwb1snS9i9AqOub3ceu7wRu6S0cXakato2xdgNIGKmEGrg==
+   eJzt18ENhCAURVFLeR1M/90Zd7MhDoHwYXLOigjITXSh1wUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwA4+1QEdTmrlv530Lp7UyjwZnF8pg/MrpTqAbaQ6oEOqA9jG802QxvUZ955JKwAAnC3VAS/SGO8ojTG0pGNd9b9rOtZVt7LeyDN/2/s9n4Fzfj1vZO9OrUC9G28mBnw=
   </data>
  </layer>
  <layer id="2" name="Interactables" width="200" height="150">
   <data encoding="base64" compression="zlib">
-   eJzt2bERhDAUQ0H674LrgA7JGTtiECe8m5H8cfAUsW0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwffvbD4A/Zh8wZx98wVMdt92FkbaO7YOkto7tg6S2ju2DpN/l+1j0Loxce1v1Loy0dWwfJLV1bB8ktXVsHyS1dWwfJLV1bB8ktXVsHyTNerv7X6HtLmt5qpe2uwAzJ+xTIL8=
+   eJzt0kEKwjAURdHufxe6g+7QqRQqiGhzv+eMkkDgDt62AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwH+7XR3whlIrM5Q2V2plhtLmSq3MUNpcqZUZSpsrtTJDaXOlVmYoba7USsf9cN+fzqttrtTKDMfNrazUygylzZVamaG0uVIrM5Q2V2plhtLmSq3MUNpcqZUZSpsrtTLD2eb2k/crlVpZ2yebefX3G1sstQK/9wBYQxxf
   </data>
  </layer>
- <objectgroup id="3" name="Objects" visible="0">
-  <object id="1" name="tp1" type="teleport" x="1760" y="2176" width="32" height="208">
+ <objectgroup id="3" name="Objects">
+  <object id="1" name="tp1" type="teleport" x="1920" y="2320" width="48" height="80">
    <properties>
     <property name="anchor_x" type="float" value="0"/>
     <property name="anchor_y" type="float" value="0"/>
     <property name="dst" type="object" value="2"/>
    </properties>
   </object>
-  <object id="2" name="tp1b" type="teleport" x="1408" y="2176" width="32" height="208">
+  <object id="2" name="tp1b" type="teleport" x="1232" y="2320" width="48" height="80">
    <properties>
     <property name="anchor_x" type="float" value="1"/>
     <property name="anchor_y" type="float" value="0"/>
@@ -97,10 +97,24 @@
   <object id="4" name="player_start" type="player_start" x="1560" y="2376">
    <point/>
   </object>
+  <object id="9" name="tp2" type="teleport" x="1984" y="2224" width="48" height="48">
+   <properties>
+    <property name="anchor_x" type="float" value="0"/>
+    <property name="anchor_y" type="float" value="0"/>
+    <property name="dst" type="object" value="10"/>
+   </properties>
+  </object>
+  <object id="10" name="tp2b" type="teleport" x="1296" y="2224" width="48" height="48">
+   <properties>
+    <property name="anchor_x" type="float" value="1"/>
+    <property name="anchor_y" type="float" value="0"/>
+    <property name="dst" type="object" value="9"/>
+   </properties>
+  </object>
  </objectgroup>
  <layer id="6" name="DecorationsHover" width="200" height="150">
   <data encoding="base64" compression="zlib">
-   eJzt17EJACAMBMAskhHcfz0bBRWxEy3u4Ps0T5IIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHaypbweBD7XuwIAoww7AnKT9b/wb8DZqT/AzP0FAAAAAAAAAAAAAAAAAHBfBUWeAr8=
+   eJzt18EJACEMBMA0khLsvz0/HqiIIBzoYwb2n8+SJAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAU9lSbg8Cj/u6AgC9DDsCcpH5v/BvwN6uP8DI/QUAAAAAAAAAAAAAAAAA8I8K+McCvw==
   </data>
  </layer>
 </map>

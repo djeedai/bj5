@@ -326,12 +326,12 @@ fn teleport(
     // Change epoch
     if tp_dir != 0 {
         let mut epoch = epoch.single_mut();
-        if tp_dir < 0 && epoch.cur > epoch.min {
-            debug!("Epoch {} -> {}", epoch.cur, epoch.cur - 1);
-            epoch.cur -= 1;
-        } else if tp_dir > 0 && epoch.cur < epoch.max {
+        if tp_dir < 0 && epoch.cur < epoch.max {
             debug!("Epoch {} -> {}", epoch.cur, epoch.cur + 1);
             epoch.cur += 1;
+        } else if tp_dir > 0 && epoch.cur > epoch.min {
+            debug!("Epoch {} -> {}", epoch.cur, epoch.cur - 1);
+            epoch.cur -= 1;
         }
     }
 }
