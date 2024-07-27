@@ -18,9 +18,10 @@ mod tiled;
 pub use components::*;
 pub use tiled::*;
 
-#[derive(Resource)]
+#[derive(Default, Resource)]
 struct UiRes {
     pub font: Handle<Font>,
+    pub title_image: Handle<Image>,
 }
 
 fn main() {
@@ -67,6 +68,7 @@ fn main() {
         })
         .register_type::<Player>()
         .insert_resource(ClearColor(Color::BLACK))
+        .init_resource::<UiRes>()
         .add_systems(Startup, setup)
         .add_systems(First, toggle_debug)
         .add_systems(PreUpdate, player_input)
@@ -97,7 +99,12 @@ pub fn close_on_esc(mut ev_app_exit: EventWriter<AppExit>, input: Res<ButtonInpu
     }
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>, audio: Res<Audio>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    audio: Res<Audio>,
+    mut ui_res: ResMut<UiRes>,
+) {
     commands.spawn((
         Camera2dBundle {
             projection: OrthographicProjection {
@@ -148,6 +155,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>, audio: Res<Audi
 
     // Start background audio
     audio.play(asset_server.load("bgm1.ogg")).looped();
+
+    ui_res.title_image = asset_server.load("title.png");
 }
 
 fn post_load_setup(
@@ -485,6 +494,7 @@ fn main_ui(
     mut q_canvas: Query<&mut Canvas>,
     q_player: Query<&PlayerLife>,
     q_temp: Query<&PlayerController>,
+    ui_res: Res<UiRes>,
 ) {
     let mut canvas = q_canvas.single_mut();
     canvas.clear();
@@ -522,6 +532,15 @@ fn main_ui(
         r.max.x = r.min.x + (r.width() / player_life.max_life * player_life.life);
         ctx.fill(r, &brush);
     }
+
+    let title_rect = Rect::new(-408., -130., 408., 130.);
+    let brush = ctx.solid_brush(Color::WHITE);
+    ctx.fill(title_rect, &brush);
+    ctx.draw_image(
+        title_rect,
+        ui_res.title_image.clone(),
+        bevy_keith::ImageScaling::Uniform(2.),
+    );
 }
 
 fn apply_epoch(
