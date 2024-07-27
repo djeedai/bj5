@@ -215,11 +215,22 @@ fn animate_tiles(time: Res<Time>, mut query: Query<(&mut TileAnimation, &mut Til
 
 fn player_input(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut player: Query<(&Player, &mut ExternalImpulse)>,
+    mut player: Query<(Entity, &Player, &mut ExternalImpulse)>,
+    physics: Res<RapierContext>,
 ) {
-    let Ok((player, mut impulse)) = player.get_single_mut() else {
+    let Ok((player_entity, player, mut impulse)) = player.get_single_mut() else {
         return;
     };
+
+    let mut is_grounded = false;
+    for c in physics.contact_pairs_with(player_entity) {
+        for m in c.manifolds() {
+            if m.normal().y > 0.7 {
+                is_grounded = true;
+                break;
+            }
+        }
+    }
 
     let mut dv = Vec2::ZERO;
     if keyboard.pressed(KeyCode::KeyA) {
@@ -228,7 +239,7 @@ fn player_input(
     if keyboard.pressed(KeyCode::KeyD) {
         dv.x += 1.;
     }
-    if keyboard.just_pressed(KeyCode::Space) {
+    if is_grounded && keyboard.just_pressed(KeyCode::Space) {
         dv.y += 30.;
     }
     // trace!("dv: {:?}", dv);
