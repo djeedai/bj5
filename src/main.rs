@@ -5,6 +5,7 @@ use bevy::{
     prelude::*, render::camera::ScalingMode, window::WindowResolution,
 };
 use bevy_ecs_tilemap::tiles::{TileTextureIndex, TileVisible};
+#[cfg(feature = "debug")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_keith::{Canvas, KeithPlugin, ShapeExt};
 use bevy_kira_audio::prelude::*;
@@ -38,36 +39,40 @@ struct MainMenu {
 }
 
 fn main() {
-    App::new()
-        .add_plugins(
-            DefaultPlugins
-                .set(AssetPlugin {
-                    // Wasm builds will check for meta files (that don't exist) if this isn't set.
-                    // This causes errors and even panics in web builds on itch.
-                    // See https://github.com/bevyengine/bevy_github_ci_template/issues/48.
-                    meta_check: AssetMetaCheck::Never,
+    let mut app = App::new();
+
+    app.add_plugins(
+        DefaultPlugins
+            .set(AssetPlugin {
+                // Wasm builds will check for meta files (that don't exist) if this isn't set.
+                // This causes errors and even panics in web builds on itch.
+                // See https://github.com/bevyengine/bevy_github_ci_template/issues/48.
+                meta_check: AssetMetaCheck::Never,
+                ..default()
+            })
+            .set(LogPlugin {
+                level: bevy::log::Level::WARN,
+                filter: "bj5=trace".to_string(),
+                ..default()
+            })
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: String::from("bj5"),
+                    resolution: WindowResolution::new(960., 720.),
+                    resizable: false,
                     ..default()
-                })
-                .set(LogPlugin {
-                    level: bevy::log::Level::WARN,
-                    filter: "bj5=trace".to_string(),
-                    ..default()
-                })
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: String::from("bj5"),
-                        resolution: WindowResolution::new(960., 720.),
-                        resizable: false,
-                        ..default()
-                    }),
-                    ..default()
-                })
-                .set(ImagePlugin::default_nearest()),
-        )
-        .add_plugins(
-            WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
-        )
-        .add_plugins(bevy_ecs_tilemap::TilemapPlugin)
+                }),
+                ..default()
+            })
+            .set(ImagePlugin::default_nearest()),
+    );
+
+    #[cfg(feature = "debug")]
+    app.add_plugins(
+        WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F1)),
+    );
+
+    app.add_plugins(bevy_ecs_tilemap::TilemapPlugin)
         .add_plugins(tiled::TiledMapPlugin)
         .add_plugins(AudioPlugin)
         .add_plugins(KeithPlugin)
@@ -87,6 +92,7 @@ fn main() {
         // General setup
         .add_systems(Startup, setup)
         // All-state
+        .add_systems(Update, close_on_esc)
         // Debug
         .add_systems(First, toggle_debug)
         // Main menu
@@ -102,7 +108,6 @@ fn main() {
         .add_systems(
             Update,
             (
-                close_on_esc,
                 animate_sprites,
                 animate_tiles,
                 teleport,
