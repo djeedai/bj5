@@ -1,10 +1,13 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # Disabled to prevent CI overrun
+  #push:
+  #  branches: [main]
+  #pull_request:
+  #  branches: [main]
+  # Enable manual trigger via GitHub UI
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
