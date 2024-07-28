@@ -1,7 +1,5 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
-use std::time::Duration;
-
 use bevy::{
     asset::AssetMetaCheck, input::common_conditions::input_toggle_active, log::LogPlugin,
     prelude::*, render::camera::ScalingMode, window::WindowResolution,
@@ -22,6 +20,21 @@ pub use tiled::*;
 struct UiRes {
     pub font: Handle<Font>,
     pub title_image: Handle<Image>,
+    pub cursor_image: Handle<Image>,
+    pub cursor_atlas_layout: Handle<TextureAtlasLayout>,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, States)]
+enum AppState {
+    #[default]
+    MainMenu,
+    //SettingsMenu,
+    InGame,
+}
+
+#[derive(Default, Resource)]
+struct MainMenu {
+    pub selected_index: usize,
 }
 
 fn main() {
@@ -69,18 +82,39 @@ fn main() {
         .register_type::<Player>()
         .insert_resource(ClearColor(Color::BLACK))
         .init_resource::<UiRes>()
+        .init_resource::<MainMenu>()
+        .init_state::<AppState>()
+        // General setup
         .add_systems(Startup, setup)
+        // All-state
+        // Debug
         .add_systems(First, toggle_debug)
-        .add_systems(PreUpdate, player_input)
-        .add_systems(Update, post_load_setup)
-        .add_systems(Update, close_on_esc)
-        .add_systems(Update, animate_sprites)
-        .add_systems(Update, animate_tiles)
-        .add_systems(Update, teleport)
-        .add_systems(Update, damage_player)
-        .add_systems(Update, main_ui)
-        .add_systems(PostUpdate, update_camera)
-        .add_systems(PostUpdate, apply_epoch)
+        // Main menu
+        .add_systems(OnEnter(AppState::MainMenu), setup_main_menu)
+        .add_systems(
+            PreUpdate,
+            main_menu_inputs.run_if(in_state(AppState::MainMenu)),
+        )
+        .add_systems(Update, ui_main_menu.run_if(in_state(AppState::MainMenu)))
+        // In-game
+        .add_systems(PreUpdate, player_input.run_if(in_state(AppState::InGame)))
+        .add_systems(OnEnter(AppState::InGame), post_load_setup)
+        .add_systems(
+            Update,
+            (
+                close_on_esc,
+                animate_sprites,
+                animate_tiles,
+                teleport,
+                damage_player,
+                main_ui,
+            )
+                .run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(
+            PostUpdate,
+            (update_camera, apply_epoch).run_if(in_state(AppState::InGame)),
+        )
         .run();
 }
 
@@ -104,6 +138,7 @@ fn setup(
     asset_server: Res<AssetServer>,
     audio: Res<Audio>,
     mut ui_res: ResMut<UiRes>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     commands.spawn((
         Camera2dBundle {
@@ -156,15 +191,22 @@ fn setup(
     // Start background audio
     audio.play(asset_server.load("bgm1.ogg")).looped();
 
+    ui_res.font = asset_server.load("fonts/PressStart2P-Regular.ttf");
+
     ui_res.title_image = asset_server.load("title.png");
+
+    ui_res.cursor_image = asset_server.load("player1.png");
+    let player_layout =
+        TextureAtlasLayout::from_grid(UVec2::splat(15), 4, 1, Some(UVec2::ONE), None);
+    let player_atlas_layout = texture_atlas_layouts.add(player_layout);
+    ui_res.cursor_atlas_layout = player_atlas_layout;
 }
 
 fn post_load_setup(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     q_player_start: Query<&PlayerStart, Added<PlayerStart>>,
     mut q_camera: Query<&mut Transform, With<MainCamera>>,
+    ui_res: Res<UiRes>,
 ) {
     let Ok(player_start) = q_player_start.get_single() else {
         return;
@@ -178,18 +220,14 @@ fn post_load_setup(
 
     // Spawn player
     trace!("Spawning player at {:?}...", player_start.position);
-    let player_sheet = asset_server.load("player1.png");
-    let player_layout =
-        TextureAtlasLayout::from_grid(UVec2::splat(15), 4, 1, Some(UVec2::ONE), None);
-    let player_atlas_layout = texture_atlas_layouts.add(player_layout);
     commands.spawn((
         SpriteBundle {
             transform: Transform::from_xyz(player_start.position.x, player_start.position.y, 4.),
-            texture: player_sheet,
+            texture: ui_res.cursor_image.clone(),
             ..default()
         },
         TextureAtlas {
-            layout: player_atlas_layout,
+            layout: ui_res.cursor_atlas_layout.clone(),
             index: 0,
         },
         TileAnimation::uniform(0, 2, 100),
@@ -512,6 +550,7 @@ fn main_ui(
                 "grounded={} climbing={}",
                 pc.is_grounded, pc.is_climbing
             ))
+            .font(ui_res.font.clone())
             .font_size(16.)
             .color(Color::WHITE)
             .alignment(JustifyText::Left)
@@ -532,15 +571,6 @@ fn main_ui(
         r.max.x = r.min.x + (r.width() / player_life.max_life * player_life.life);
         ctx.fill(r, &brush);
     }
-
-    let title_rect = Rect::new(-408., -130., 408., 130.);
-    let brush = ctx.solid_brush(Color::WHITE);
-    ctx.fill(title_rect, &brush);
-    ctx.draw_image(
-        title_rect,
-        ui_res.title_image.clone(),
-        bevy_keith::ImageScaling::Uniform(2.),
-    );
 }
 
 fn apply_epoch(
@@ -585,4 +615,97 @@ fn apply_epoch(
             }
         }
     }
+}
+
+fn setup_main_menu() {}
+
+fn main_menu_inputs(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut main_menu: ResMut<MainMenu>,
+    mut app_state: ResMut<NextState<AppState>>,
+    mut ev_app_exit: EventWriter<AppExit>,
+) {
+    if (keyboard.just_pressed(KeyCode::KeyW) || keyboard.just_pressed(KeyCode::ArrowUp))
+        && main_menu.selected_index > 0
+    {
+        main_menu.selected_index -= 1;
+    } else if (keyboard.just_pressed(KeyCode::KeyS) || keyboard.just_pressed(KeyCode::ArrowDown))
+        && main_menu.selected_index < 1
+    {
+        main_menu.selected_index += 1;
+    }
+
+    if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::NumpadEnter) {
+        match main_menu.selected_index {
+            0 => app_state.set(AppState::InGame),
+            1 => {
+                ev_app_exit.send(AppExit::Success);
+            }
+            _ => (),
+        }
+    }
+}
+
+fn ui_main_menu(mut q_canvas: Query<&mut Canvas>, ui_res: Res<UiRes>, main_menu: Res<MainMenu>) {
+    let mut canvas = q_canvas.single_mut();
+    canvas.clear();
+
+    let mut ctx = canvas.render_context();
+
+    // Background
+    let brush = ctx.solid_brush(Srgba::hex("3b69ba").unwrap().into());
+    let screen_rect = Rect::new(-480., -360., 480., 360.);
+    ctx.fill(screen_rect, &brush);
+
+    // Title
+    let title_rect = Rect::new(-408., -130., 408., 130.);
+    let brush = ctx.solid_brush(Color::WHITE);
+    ctx.fill(title_rect, &brush);
+    ctx.draw_image(
+        title_rect,
+        ui_res.title_image.clone(),
+        bevy_keith::ImageScaling::Uniform(2.),
+    );
+
+    let txt = ctx
+        .new_layout("New Game")
+        .font(ui_res.font.clone())
+        .font_size(32.)
+        .color(Color::WHITE)
+        .alignment(JustifyText::Left)
+        .bounds(Vec2::new(300., 20.))
+        .build();
+    ctx.draw_text(txt, Vec2::new(0., 190.));
+
+    let txt = ctx
+        .new_layout("Exit")
+        .font(ui_res.font.clone())
+        .font_size(32.)
+        .color(Color::WHITE)
+        .alignment(JustifyText::Left)
+        .bounds(Vec2::new(300., 20.))
+        .build();
+    ctx.draw_text(txt, Vec2::new(0., 250.));
+
+    // commands.spawn((
+    //     SpriteBundle {
+    //         transform: Transform::from_xyz(player_start.position.x, player_start.position.y, 4.),
+    //         texture: ui_res.cursor_image.clone(),
+    //         ..default()
+    //     },
+    //     TextureAtlas {
+    //         layout: ui_res.cursor_atlas_layout.clone(),
+    //         index: 0,
+    //     },
+    //     TileAnimation::uniform(0, 2, 100),
+    //     Name::new("StartMenuCursor"),
+    // ));
+
+    let cursor_y = 190. + main_menu.selected_index as f32 * 60.;
+    let cursor_rect = Rect::from_center_size(Vec2::new(-180., cursor_y), Vec2::splat(48.));
+    ctx.draw_image(
+        cursor_rect,
+        ui_res.cursor_image.clone(),
+        bevy_keith::ImageScaling::Uniform(1.),
+    );
 }
