@@ -121,7 +121,10 @@ fn main() {
             PostUpdate,
             (update_camera, apply_epoch).run_if(in_state(AppState::InGame)),
         )
-        .run();
+        // Game over
+        .add_systems(Update, (game_over_ui,).run_if(in_state(AppState::GameOver)));
+
+    app.run();
 }
 
 pub fn toggle_debug(
@@ -604,6 +607,42 @@ fn main_ui(
         r.max.x = r.min.x + (r.width() / player_life.max_life * player_life.life);
         ctx.fill(r, &brush);
     }
+}
+
+fn game_over_ui(ui_res: Res<UiRes>, mut q_canvas: Query<&mut Canvas>) {
+    let mut canvas = q_canvas.single_mut();
+    canvas.clear();
+
+    let mut ctx = canvas.render_context();
+
+    let brush = ctx.solid_brush(Color::srgba(0., 0., 0., 0.7));
+    ctx.fill(Rect::new(-480., -370., -380., -325.), &brush);
+
+    // Background
+    // let brush = ctx.solid_brush(Srgba::hex("3b69ba").unwrap().into());
+    // let screen_rect = Rect::new(-480., -360., 480., 360.);
+    // ctx.fill(screen_rect, &brush);
+
+    // Game over
+    let txt = ctx
+        .new_layout("Game Over")
+        .font(ui_res.font.clone())
+        .font_size(32.)
+        .color(Color::WHITE)
+        .alignment(JustifyText::Left)
+        .bounds(Vec2::new(300., 20.))
+        .build();
+    ctx.draw_text(txt, Vec2::new(0., 190.));
+
+    let txt = ctx
+        .new_layout("Press ESC to quit")
+        .font(ui_res.font.clone())
+        .font_size(16.)
+        .color(Color::WHITE)
+        .alignment(JustifyText::Left)
+        .bounds(Vec2::new(300., 20.))
+        .build();
+    ctx.draw_text(txt, Vec2::new(0., 250.));
 }
 
 fn apply_epoch(
