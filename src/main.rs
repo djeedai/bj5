@@ -31,6 +31,7 @@ enum AppState {
     MainMenu,
     //SettingsMenu,
     InGame,
+    GameOver,
 }
 
 #[derive(Default, Resource)]
@@ -269,10 +270,12 @@ fn animate_tiles(time: Res<Time>, mut query: Query<(&mut TileAnimation, &mut Til
 }
 
 fn player_input(
+    time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
     mut player: Query<(
         Entity,
         &Player,
+        &PlayerLife,
         &mut PlayerController,
         &mut Velocity,
         &mut GravityScale,
@@ -284,6 +287,7 @@ fn player_input(
     let Ok((
         player_entity,
         player,
+        player_life,
         mut player_controller,
         mut velocity,
         mut gravity_scale,
@@ -382,8 +386,22 @@ fn player_input(
 
     // trace!("dv: {:?}", dv);
 
-    if dv != Vec2::ZERO {
-        impulse.impulse = dv * player.impulse_factor;
+    let mut dv = dv * player.impulse_factor;
+
+    // If damaged, apply the (gradually fading) damage impulse
+    if let Some(ratio) = player_life.damage_impulse_factor(time.elapsed()) {
+        // warn!(
+        //     "ratio={} dv={:?} dir={:?}",
+        //     ratio,
+        //     dv,
+        //     player_life.last_dmg_dir * 6000.
+        // );
+        dv = dv.lerp(player_life.last_dmg_dir * 6000., 1. - ratio);
+        //warn!("dv={:?}", dv);
+    }
+
+    if dv != impulse.impulse {
+        impulse.impulse = dv;
     }
 }
 
@@ -486,11 +504,15 @@ fn teleport(
 }
 
 fn damage_player(
-    mut q_player: Query<(Entity, &mut PlayerLife)>,
-    q_damage: Query<&Damage, Without<PlayerLife>>,
+    time: Res<Time>,
+    mut q_player: Query<(Entity, &Transform, &mut PlayerLife, &mut ExternalImpulse)>,
+    q_damage: Query<(&Damage, &Transform), Without<PlayerLife>>,
     mut events: EventReader<CollisionEvent>,
+    mut app_state: ResMut<NextState<AppState>>,
 ) {
-    let Ok((player_entity, mut player_life)) = q_player.get_single_mut() else {
+    let Ok((player_entity, player_transform, mut player_life, mut player_impulse)) =
+        q_player.get_single_mut()
+    else {
         return;
     };
 
@@ -510,8 +532,14 @@ fn damage_player(
                 std::mem::swap(&mut e1, &mut e2);
             }
             if e1 == player_entity {
-                if let Ok(dmg) = q_damage.get(e2) {
-                    player_life.damage(dmg.0);
+                if let Ok((dmg, dmg_transform)) = q_damage.get(e2) {
+                    let dir = (player_transform.translation.xy() - dmg_transform.translation.xy())
+                        .normalize();
+                    //error!("dir={:?}", dir);
+                    player_life.damage(time.elapsed(), dmg.0, dir);
+                    if player_life.life <= 0. {
+                        app_state.set(AppState::GameOver);
+                    }
                 }
             }
         }
@@ -536,8 +564,8 @@ fn update_camera(
 fn main_ui(
     mut q_canvas: Query<&mut Canvas>,
     q_player: Query<&PlayerLife>,
-    q_temp: Query<&PlayerController>,
-    ui_res: Res<UiRes>,
+    //q_temp: Query<&PlayerController>,
+    //ui_res: Res<UiRes>,
 ) {
     let mut canvas = q_canvas.single_mut();
     canvas.clear();
@@ -547,25 +575,25 @@ fn main_ui(
     let brush = ctx.solid_brush(Color::srgba(0., 0., 0., 0.7));
     ctx.fill(Rect::new(-480., -370., -380., -325.), &brush);
 
-    // TEMP
-    if let Ok(pc) = q_temp.get_single() {
-        let txt = ctx
-            //.new_layout("Time: 017")
-            .new_layout(format!(
-                "grounded={} climbing={}",
-                pc.is_grounded, pc.is_climbing
-            ))
-            .font(ui_res.font.clone())
-            .font_size(16.)
-            .color(Color::WHITE)
-            .alignment(JustifyText::Left)
-            .bounds(Vec2::new(100., 20.))
-            .build();
-        ctx.draw_text(txt, Vec2::new(-430., -340.));
-    }
+    // // TEMP
+    // if let Ok(pc) = q_temp.get_single() {
+    //     let txt = ctx
+    //         //.new_layout("Time: 017")
+    //         .new_layout(format!(
+    //             "grounded={} climbing={}",
+    //             pc.is_grounded, pc.is_climbing
+    //         ))
+    //         .font(ui_res.font.clone())
+    //         .font_size(16.)
+    //         .color(Color::WHITE)
+    //         .alignment(JustifyText::Left)
+    //         .bounds(Vec2::new(100., 20.))
+    //         .build();
+    //     ctx.draw_text(txt, Vec2::new(-430., -340.));
+    // }
 
     if let Ok(player_life) = q_player.get_single() {
-        let r = Rect::new(-470., -300., -320., -320.);
+        let r = Rect::new(-470., -320., -320., -340.);
 
         let brush = ctx.solid_brush(Color::BLACK);
         let border_brush = ctx.solid_brush(Color::WHITE);
