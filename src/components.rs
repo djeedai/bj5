@@ -166,3 +166,6 @@ pub struct Damage(pub f32);
 
 #[derive(Default, Component)]
 pub struct Ladder;
+
+#[derive(Default, Component)]
+pub struct LevelEnd;

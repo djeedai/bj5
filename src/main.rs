@@ -53,12 +53,12 @@ fn main() {
             })
             .set(LogPlugin {
                 level: bevy::log::Level::WARN,
-                filter: "bj5=trace".to_string(),
+                filter: "wheel-of-time=trace".to_string(),
                 ..default()
             })
             .set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: String::from("bj5"),
+                    title: String::from("Wheel of Time - Bevy Game Jame #5"),
                     resolution: WindowResolution::new(960., 720.),
                     resizable: false,
                     ..default()
@@ -114,6 +114,7 @@ fn main() {
                 teleport,
                 damage_player,
                 main_ui,
+                check_victory,
             )
                 .run_if(in_state(AppState::InGame)),
         )
@@ -609,6 +610,41 @@ fn main_ui(
     }
 }
 
+fn check_victory(
+    mut q_player: Query<Entity, With<Player>>,
+    mut events: EventReader<CollisionEvent>,
+    q_level_end: Query<Entity, With<LevelEnd>>,
+    mut app_state: ResMut<NextState<AppState>>,
+) {
+    let Ok(player_entity) = q_player.get_single_mut() else {
+        return;
+    };
+
+    for ev in events.read() {
+        let CollisionEvent::Started(e1, e2, flags) = ev else {
+            continue;
+        };
+
+        // trace!("Started: e1={:?} e2={:?} flags={:?}", e1, e2, flags);
+
+        // Detect when player starts overlapping a teleporter
+        if flags.contains(CollisionEventFlags::SENSOR) {
+            let mut e1 = *e1;
+            let mut e2 = *e2;
+            // Swap entities such that player is always #1 and TP is always #2
+            if e2 == player_entity {
+                std::mem::swap(&mut e1, &mut e2);
+            }
+            if e1 == player_entity {
+                if q_level_end.contains(e2) {
+                    info!("LevelEnd!");
+                    app_state.set(AppState::GameOver);
+                }
+            }
+        }
+    }
+}
+
 fn game_over_ui(ui_res: Res<UiRes>, mut q_canvas: Query<&mut Canvas>) {
     let mut canvas = q_canvas.single_mut();
     canvas.clear();
@@ -635,12 +671,12 @@ fn game_over_ui(ui_res: Res<UiRes>, mut q_canvas: Query<&mut Canvas>) {
     ctx.draw_text(txt, Vec2::new(0., 190.));
 
     let txt = ctx
-        .new_layout("Press ESC to quit")
+        .new_layout("Press ESC / refresh page to quit")
         .font(ui_res.font.clone())
         .font_size(16.)
         .color(Color::WHITE)
         .alignment(JustifyText::Left)
-        .bounds(Vec2::new(300., 20.))
+        .bounds(Vec2::new(300., 100.))
         .build();
     ctx.draw_text(txt, Vec2::new(0., 250.));
 }

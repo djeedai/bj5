@@ -35,7 +35,7 @@ use bevy_ecs_tilemap::prelude::*;
 use bevy_rapier2d::prelude::*;
 use thiserror::Error;
 
-use crate::{Damage, Epoch, EpochSprite, Ladder, PlayerStart, Teleporter, TileAnimation};
+use crate::{Damage, Epoch, EpochSprite, Ladder, LevelEnd, PlayerStart, Teleporter, TileAnimation};
 
 #[derive(Default, Component)]
 pub struct TileCollision;
@@ -637,6 +637,19 @@ pub fn process_loaded_maps(
                             Collider::cuboid(width / 2., height / 2.),
                             Sensor,
                             Ladder,
+                            Name::new(obj.name.clone()),
+                        ));
+                    } else if obj.user_type == "level_end" {
+                        let tiled::ObjectShape::Rect { width, height } = &obj.shape else {
+                            continue;
+                        };
+
+                        let offset = Vec3::new(width / 2., -height / 2., 0.);
+                        commands.spawn((
+                            TransformBundle::from(Transform::from_translation(position + offset)),
+                            Collider::cuboid(width / 2., height / 2.),
+                            Sensor,
+                            LevelEnd,
                             Name::new(obj.name.clone()),
                         ));
                     } else {
